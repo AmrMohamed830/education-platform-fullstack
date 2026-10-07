@@ -1,0 +1,105 @@
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  position: relative;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.required {
+  color: #EF4444;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  background-color: #FFFFFF;
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.input::placeholder {
+  color: var(--text-light);
+}
+
+.input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.hasIconStart {
+  padding-right: 2.75rem;
+}
+
+.hasIconEnd {
+  padding-left: 2.75rem;
+}
+
+.iconStart {
+  position: absolute;
+  right: 1rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.input:focus ~ .iconStart {
+  color: var(--primary);
+}
+
+.togglePasswordBtn {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease;
+}
+
+.togglePasswordBtn:hover {
+  color: var(--primary);
+}
+
+/* Error State */
+.hasError .input {
+  border-color: #EF4444;
+  background-color: #FEF2F2;
+}
+
+.hasError .input:focus {
+  box-shadow: 0 0 0 4px #FEE2E2;
+}
+
+.errorMessage {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #EF4444;
+  margin-top: 0.15rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
