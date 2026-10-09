@@ -26,7 +26,14 @@ const register = async (req, res) => {
   newUser.token = token;
 
   await newUser.save();
-  res.status(201).json({ status: "success",data: { user: newUser }});
+  const { password: userPassword, token: userToken, ...userData } = newUser.toObject();
+  res.status(201).json({
+    status: "success",
+    data: {
+      user: userData,
+      token,
+    },
+  });
 };
 
 const login = async (req, res) => {
@@ -42,7 +49,15 @@ const login = async (req, res) => {
         email: findUserByEmail.email,
         id: findUserByEmail._id,
       });
-      res.status(200).json({ status: "success", data: { token } });
+      const { password: userPassword, token: userToken, ...userData } = findUserByEmail.toObject();
+
+      res.status(200).json({
+        status: "success",
+        data: {
+          user: userData,
+          token,
+        },
+      });
     } else {
       res.status(401).json("the Email or password are not correct");
     }
