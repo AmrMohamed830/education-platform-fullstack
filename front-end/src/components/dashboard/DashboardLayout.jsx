@@ -8,7 +8,7 @@ import AdminView from './AdminView';
 import { studentDashboardData, adminDashboardData } from '@/data/dashboardData';
 import styles from './DashboardLayout.module.css';
 
-export default function DashboardLayout() {
+export default function  DashboardLayout() {
   const [role, setRole] = useState('student'); // 'student' | 'admin'
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
