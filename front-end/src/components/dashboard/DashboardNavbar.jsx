@@ -3,7 +3,11 @@
 import { Search, Bell, Menu, RefreshCw, UserCheck } from 'lucide-react';
 import styles from './DashboardNavbar.module.css';
 
-export default function DashboardNavbar({ role, setRole, onToggleSidebar, user }) {
+export default function DashboardNavbar({ onToggleSidebar, user }) {
+
+  const isAdmin = ["ADMIN", "MANAGER"].includes(user?.role);
+
+
   return (
     <header className={styles.navbar}>
       <div className={styles.leftGroup}>
@@ -23,22 +27,6 @@ export default function DashboardNavbar({ role, setRole, onToggleSidebar, user }
       </div>
 
       <div className={styles.rightGroup}>
-        {/* Role Switcher Demo Control */}
-        <div className={styles.roleSwitcher}>
-          <span className={styles.switcherLabel}>معاينة الواجهة:</span>
-          <button
-            className={`${styles.roleToggleBtn} ${role === 'student' ? styles.activeRole : ''}`}
-            onClick={() => setRole('student')}
-          >
-            🎓 طالب
-          </button>
-          <button
-            className={`${styles.roleToggleBtn} ${role === 'admin' ? styles.activeRoleAdmin : ''}`}
-            onClick={() => setRole('admin')}
-          >
-            👑 مشرف
-          </button>
-        </div>
 
         {/* Notification Bell */}
         <button className={styles.notificationBtn} aria-label="الإشعارات">
@@ -50,9 +38,9 @@ export default function DashboardNavbar({ role, setRole, onToggleSidebar, user }
         <div className={styles.userProfile}>
           <div className={styles.avatar}>{user?.avatar || '👤'}</div>
           <div className={styles.userInfo}>
-            <span className={styles.userName}>{user?.name || 'المستخدم'}</span>
+            <span className={styles.userName}> {user?.name || user?.email || "المستخدم"}</span>
             <span className={styles.userRole}>
-              {role === 'admin' ? 'مشرف النظام' : 'طالب مسجل'}
+             {isAdmin ? "مشرف النظام" : "طالب مسجل"}
             </span>
           </div>
         </div>

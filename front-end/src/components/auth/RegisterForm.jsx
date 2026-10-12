@@ -1,88 +1,115 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { User, Mail, Lock, ShieldCheck, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
-import Input from '../common/Input';
-import Checkbox from '../common/Checkbox';
-import Button from '../common/Button';
-import styles from './RegisterForm.module.css';
+import { useState } from "react";
+import {
+  User,
+  Mail,
+  Lock,
+  ShieldCheck,
+  UserPlus,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import Input from "../common/Input";
+import Checkbox from "../common/Checkbox";
+import Button from "../common/Button";
+import styles from "./RegisterForm.module.css";
+import { registerUser } from "../../services/auth.service";
+import useAuthStore from "@/store/auth.store";
+import { useRouter } from "next/navigation";
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
     acceptTerms: false,
   });
-
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [generalError, setGeneralError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [generalError, setGeneralError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
 
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    if (generalError) setGeneralError('');
+    if (generalError) setGeneralError("");
   };
 
   const validate = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'يرجى إدخال الاسم الكامل';
+      newErrors.fullName = "يرجى إدخال الاسم الكامل";
     } else if (formData.fullName.trim().length < 3) {
-      newErrors.fullName = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+      newErrors.fullName = "الاسم يجب أن يكون 3 أحرف على الأقل";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'يرجى إدخال البريد الإلكتروني';
+      newErrors.email = "يرجى إدخال البريد الإلكتروني";
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'يرجى إدخال بريد إلكتروني صحيح';
+      newErrors.email = "يرجى إدخال بريد إلكتروني صحيح";
     }
 
     if (!formData.password) {
-      newErrors.password = 'يرجى إدخال كلمة المرور';
+      newErrors.password = "يرجى إدخال كلمة المرور";
     } else if (formData.password.length < 8) {
-      newErrors.password = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+      newErrors.password = "كلمة المرور يجب أن تكون 8 أحرف على الأقل";
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'يرجى تأكيد كلمة المرور';
+      newErrors.confirmPassword = "يرجى تأكيد كلمة المرور";
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'كلمات المرور غير متطابقة';
+      newErrors.confirmPassword = "كلمات المرور غير متطابقة";
     }
 
     if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'يجب الموافقة على الشروط والأحكام للمتابعة';
+      newErrors.acceptTerms = "يجب الموافقة على الشروط والأحكام للمتابعة";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+const {setUser}=useAuthStore()
 
-  const handleSubmit = (e) => {
+const router = useRouter();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsLoading(true);
-    setGeneralError('');
-    setSuccessMessage('');
+    setGeneralError("");
+    setSuccessMessage("");
 
-    // Simulate register API call
-    setTimeout(() => {
+    try {
+      const response = await registerUser({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+      setUser(response.data.data.user)
+      setSuccessMessage("تم إنشاء الحساب بنجاح!");
+      router.push("/dashboard");
+    } catch (err) {
+  if (err.response?.status === 409) {
+    setGeneralError("الإيميل ده مسجل بالفعل");
+  } else {
+    setGeneralError(
+      "حصلت مشكلة أثناء إنشاء الحساب. حاول مرة تانية"
+    );
+  }
+}finally {
       setIsLoading(false);
-      setSuccessMessage('تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول.');
-    }, 1300);
+    }
   };
 
   return (
@@ -174,9 +201,9 @@ export default function RegisterForm() {
         fullWidth
         icon={isLoading ? Loader2 : UserPlus}
         disabled={isLoading}
-        className={isLoading ? styles.loadingBtn : ''}
+        className={isLoading ? styles.loadingBtn : ""}
       >
-        {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب جديد'}
+        {isLoading ? "جاري إنشاء الحساب..." : "إنشاء حساب جديد"}
       </Button>
     </form>
   );

@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Sidebar from './Sidebar';
-import DashboardNavbar from './DashboardNavbar';
-import StudentView from './StudentView';
-import AdminView from './AdminView';
-import { studentDashboardData, adminDashboardData } from '@/data/dashboardData';
-import styles from './DashboardLayout.module.css';
+import { useState } from "react";
+import Sidebar from "./Sidebar";
+import DashboardNavbar from "./DashboardNavbar";
+import StudentView from "./StudentView";
+import AdminView from "./AdminView";
+import styles from "./DashboardLayout.module.css";
+import useAuthStore from "@/store/auth.store";
 
-export default function  DashboardLayout() {
-  const [role, setRole] = useState('student'); // 'student' | 'admin'
-  const [activeTab, setActiveTab] = useState('overview');
+export default function DashboardLayout() {
+  const user = useAuthStore((state) => state.user);
+  const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const currentUser = role === 'admin' ? adminDashboardData.user : studentDashboardData.user;
+  const isAdmin = ["ADMIN", "MANAGER"].includes(user?.role);
 
   return (
     <div className={styles.wrapper}>
       {/* Sidebar Navigation */}
       <Sidebar
-        role={role}
+        role={isAdmin ? "admin" : "student"}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isOpen={isSidebarOpen}
@@ -30,18 +30,13 @@ export default function  DashboardLayout() {
       <div className={styles.mainContainer}>
         {/* Dashboard Top Navbar */}
         <DashboardNavbar
-          role={role}
-          setRole={(newRole) => {
-            setRole(newRole);
-            setActiveTab('overview');
-          }}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          user={currentUser}
+          user={user}
         />
 
         {/* Dynamic Main Dashboard Content */}
         <main className={styles.contentArea}>
-          {role === 'admin' ? <AdminView /> : <StudentView />}
+          {isAdmin ? <AdminView /> : <StudentView />}
         </main>
       </div>
     </div>
