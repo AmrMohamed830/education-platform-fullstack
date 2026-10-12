@@ -23,15 +23,23 @@ const register = async (req, res) => {
     email: newUser.email,
     id: newUser._id,
   });
-  newUser.token = token;
-
+  
   await newUser.save();
+
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 15 * 60 * 1000,
+  path: "/",
+});
+
+
   const { password: userPassword, token: userToken, ...userData } = newUser.toObject();
   res.status(201).json({
     status: "success",
     data: {
       user: userData,
-      token,
     },
   });
 };
@@ -49,13 +57,21 @@ const login = async (req, res) => {
         email: findUserByEmail.email,
         id: findUserByEmail._id,
       });
+        
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 15 * 60 * 1000,
+  path: "/",
+});
+
       const { password: userPassword, token: userToken, ...userData } = findUserByEmail.toObject();
 
       res.status(200).json({
         status: "success",
         data: {
           user: userData,
-          token,
         },
       });
     } else {
@@ -66,7 +82,22 @@ const login = async (req, res) => {
   }
 };
 
+const getCurrentUser = async (req, res) => {
+  const user =await User.findById(req.currentUser.id).select("-password -token");
+  if(user){
+    res.status(200).json({
+      status: "success",
+      data: {
+        user,
+      },
+    });
+  }else{
+    res.status(404).json("the user are not found")
+  }
+}
+
 module.exports = {
   register,
   login,
+  getCurrentUser
 };

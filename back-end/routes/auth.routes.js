@@ -1,6 +1,7 @@
 const express = require("express");
 const router=express.Router()
-const {register,login} =require("../controllers/auth.controller")
+const verifyToken = require("../middleware/auth.middleware");
+const {register,login,getCurrentUser} =require("../controllers/auth.controller")
 
 router.route("/register")
         .post(register)
@@ -8,5 +9,8 @@ router.route("/register")
 router.route("/login")
         .post(login)
 
+
+router.route("/me")
+        .get(verifyToken,getCurrentUser);
 module.exports = router;
 
