@@ -95,9 +95,23 @@ const getCurrentUser = async (req, res) => {
     res.status(404).json("the user are not found")
   }
 }
+const logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "Logged out successfully",
+  });
+};
 
 module.exports = {
   register,
   login,
-  getCurrentUser
+  getCurrentUser,
+  logout
 };
