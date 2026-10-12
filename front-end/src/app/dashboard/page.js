@@ -1,5 +1,7 @@
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
+export const instant = false;
+
 export const metadata = {
   title: 'لوحة التحكم | مَنصّتِي التعليمية',
   description: 'لوحة التحكم الشاملة للطلاب والمشرفين لمتابعة الكورسات والتقدم التعليمي والإحصائيات.',

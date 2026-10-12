@@ -7,7 +7,6 @@ import { getCurrentUser } from "@/services/auth.service";
 export default function AuthProvider({ children }) {
   const setUser = useAuthStore((state) => state.setUser);
   const setIsLoading = useAuthStore((state) => state.setIsLoading);
-  const isLoading = useAuthStore((state) => state.isLoading);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,11 +21,7 @@ export default function AuthProvider({ children }) {
     };
 
     checkAuth();
-  }, [setUser,setIsLoading]);
-
-  if (isLoading) {
-    return <p>جاري التحقق من تسجيل الدخول...</p>;
-  }
+  }, [setUser, setIsLoading]);
 
   return children;
 }

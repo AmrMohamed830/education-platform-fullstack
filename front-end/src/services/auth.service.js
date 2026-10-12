@@ -11,4 +11,8 @@ const getCurrentUser = () => {
     return api.get("/auth/me");
 };
 
-export { registerUser, loginUser,getCurrentUser  };
+const logout =()=>{
+    return api.post("/auth/logout")
+}
+
+export { registerUser, loginUser,getCurrentUser,logout  };
