@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const generateJwt = require("../utils/generateJWT");
 
 const register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, avatar } = req.body;
 
   const oldUser = await User.findOne({ email });
 
@@ -13,10 +13,13 @@ const register = async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=4F46E5&color=fff&bold=true`;
+
   const newUser = new User({
     name,
     email,
     password: hashedPassword,
+    avatar: avatar || defaultAvatar,
   });
 
   const token = await generateJwt({

@@ -25,6 +25,12 @@ const userSchema = new mongoose.Schema({
     enum: [userRoles.USER, userRoles.ADMIN, userRoles.MANAGER],
     default: userRoles.USER,
   },
+  avatar: {
+    type: String,
+    default: function () {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(this.name || 'User')}&background=4F46E5&color=fff&bold=true`;
+    },
+  },
 });
 const User = mongoose.model("User", userSchema);
 module.exports = User;
