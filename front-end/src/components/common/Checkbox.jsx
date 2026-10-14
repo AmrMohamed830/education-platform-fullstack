@@ -1,19 +1,23 @@
-'use client';
+"use client";
 
-import { Check } from 'lucide-react';
-import { cn } from '@/utils/cn';
-import styles from './Checkbox.module.css';
+import { Check } from "lucide-react";
+import { cn } from "@/utils/cn";
+import styles from "./Checkbox.module.css";
 
 export default function Checkbox({
   label,
-  checked,
+  checked = false,
   onChange,
   id,
   name,
-  className = '',
+  className = "",
+  ...props
 }) {
   return (
-    <label htmlFor={id || name} className={cn(styles.container, className)}>
+    <label
+      htmlFor={id || name}
+      className={cn(styles.container, className)}
+    >
       <input
         type="checkbox"
         id={id || name}
@@ -21,11 +25,23 @@ export default function Checkbox({
         checked={checked}
         onChange={onChange}
         className={styles.hiddenCheckbox}
+        {...props}
       />
-      <div className={cn(styles.styledCheckbox, checked && styles.checked)}>
-        {checked && <Check size={14} className={styles.checkIcon} />}
+
+      <div
+        className={cn(
+          styles.styledCheckbox,
+          checked && styles.checked
+        )}
+      >
+        {checked && (
+          <Check size={14} className={styles.checkIcon} />
+        )}
       </div>
-      {label && <span className={styles.label}>{label}</span>}
+
+      {label && (
+        <span className={styles.label}>{label}</span>
+      )}
     </label>
   );
 }

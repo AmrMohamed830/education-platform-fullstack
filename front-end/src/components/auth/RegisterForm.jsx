@@ -17,103 +17,64 @@ import styles from "./RegisterForm.module.css";
 import { registerUser } from "../../services/auth.service";
 import useAuthStore from "@/store/auth.store";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registerSchema } from "../../validations/register.schema";
+import { useForm, Controller } from "react-hook-form";
 
 export default function RegisterForm() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    acceptTerms: false,
-  });
-  const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      acceptTerms: false,
+    },
+  });
 
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-    if (generalError) setGeneralError("");
-  };
+  const { setUser } = useAuthStore();
 
-  const validate = () => {
-    const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = "يرجى إدخال الاسم الكامل";
-    } else if (formData.fullName.trim().length < 3) {
-      newErrors.fullName = "الاسم يجب أن يكون 3 أحرف على الأقل";
-    }
+  const router = useRouter();
 
-    if (!formData.email.trim()) {
-      newErrors.email = "يرجى إدخال البريد الإلكتروني";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "يرجى إدخال بريد إلكتروني صحيح";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "يرجى إدخال كلمة المرور";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "كلمة المرور يجب أن تكون 8 أحرف على الأقل";
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "يرجى تأكيد كلمة المرور";
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "كلمات المرور غير متطابقة";
-    }
-
-    if (!formData.acceptTerms) {
-      newErrors.acceptTerms = "يجب الموافقة على الشروط والأحكام للمتابعة";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-const {setUser}=useAuthStore()
-
-const router = useRouter();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-
+  const onSubmit = async (data) => {
     setIsLoading(true);
     setGeneralError("");
     setSuccessMessage("");
 
     try {
       const response = await registerUser({
-        name: formData.fullName,
-        email: formData.email,
-        password: formData.password,
+        name: data.fullName.trim(),
+        email: data.email.trim(),
+        password: data.password,
       });
-      setUser(response.data.data.user)
+
+      setUser(response.data.data.user);
       setSuccessMessage("تم إنشاء الحساب بنجاح!");
+
       router.push("/dashboard");
     } catch (err) {
-  if (err.response?.status === 409) {
-    setGeneralError("الإيميل ده مسجل بالفعل");
-  } else {
-    setGeneralError(
-      "حصلت مشكلة أثناء إنشاء الحساب. حاول مرة تانية"
-    );
-  }
-}finally {
+      if (err.response?.status === 409) {
+        setGeneralError("الإيميل ده مسجل بالفعل");
+      } else {
+        setGeneralError("حصلت مشكلة أثناء إنشاء الحساب. حاول مرة تانية");
+      }
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
       {/* General Alert */}
       {generalError && (
         <div className={styles.alertError}>
@@ -134,37 +95,32 @@ const router = useRouter();
         name="fullName"
         type="text"
         placeholder="أحمد محمد"
-        value={formData.fullName}
-        onChange={handleChange}
-        error={errors.fullName}
+        error={errors.fullName?.message}
         icon={User}
         required
+        {...register("fullName")}
       />
-
       {/* Email Input */}
       <Input
         label="البريد الإلكتروني"
         name="email"
         type="email"
         placeholder="example@domain.com"
-        value={formData.email}
-        onChange={handleChange}
-        error={errors.email}
+        error={errors.email?.message}
         icon={Mail}
         required
+        {...register("email")}
       />
-
       {/* Password Input */}
       <Input
         label="كلمة المرور"
         name="password"
         type="password"
         placeholder="8 أحرف على الأقل"
-        value={formData.password}
-        onChange={handleChange}
-        error={errors.password}
+        error={errors.password?.message}
         icon={Lock}
         required
+        {...register("password")}
       />
 
       {/* Confirm Password Input */}
@@ -173,23 +129,30 @@ const router = useRouter();
         name="confirmPassword"
         type="password"
         placeholder="أعد إدخال كلمة المرور"
-        value={formData.confirmPassword}
-        onChange={handleChange}
-        error={errors.confirmPassword}
+        error={errors.confirmPassword?.message}
         icon={ShieldCheck}
         required
+        {...register("confirmPassword")}
       />
-
       {/* Terms and Conditions Checkbox */}
       <div className={styles.termsRow}>
-        <Checkbox
-          label="أوافق على الشروط والأحكام وسياسة الخصوصية للمنصة"
+        <Controller
           name="acceptTerms"
-          checked={formData.acceptTerms}
-          onChange={handleChange}
+          control={control}
+          render={({ field }) => (
+            <Checkbox
+              label="أوافق على الشروط والأحكام وسياسة الخصوصية للمنصة"
+              name={field.name}
+              checked={field.value}
+              onChange={(event) => field.onChange(event.target.checked)}
+            />
+          )}
         />
+
         {errors.acceptTerms && (
-          <span className={styles.errorMessage}>{errors.acceptTerms}</span>
+          <span className={styles.errorMessage}>
+            {errors.acceptTerms.message}
+          </span>
         )}
       </div>
 
