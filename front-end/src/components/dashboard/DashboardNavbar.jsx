@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Bell, Menu, RefreshCw, UserCheck } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import styles from './DashboardNavbar.module.css';
 
 export default function DashboardNavbar({ onToggleSidebar, user }) {
@@ -36,7 +36,19 @@ export default function DashboardNavbar({ onToggleSidebar, user }) {
 
         {/* User Profile Snippet */}
         <div className={styles.userProfile}>
-          <div className={styles.avatar}>{user?.avatar || '👤'}</div>
+          <div className={styles.avatarWrapper}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={
+                user?.avatar ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  user?.name || "مستخدم"
+                )}&background=4F46E5&color=fff&bold=true`
+              }
+              alt={user?.name || "المستخدم"}
+              className={styles.avatarImg}
+            />
+          </div>
           <div className={styles.userInfo}>
             <span className={styles.userName}> {user?.name || user?.email || "المستخدم"}</span>
             <span className={styles.userRole}>

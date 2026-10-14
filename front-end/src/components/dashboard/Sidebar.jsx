@@ -27,6 +27,7 @@ export default function Sidebar({
   isOpen,
   onClose,
 }) {
+  const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const clearUser = useAuthStore((state) => state.logout);
   const isLoggingOut = useAuthStore(
@@ -92,10 +93,32 @@ const setIsLoggingOut = useAuthStore(
           </button>
         </div>
 
-        {/* Role Badge */}
-        <div className={styles.roleBadgeContainer}>
+        {/* User Profile Card in Sidebar */}
+        <div className={styles.userProfileCard}>
+          <div className={styles.userCardTop}>
+            <div className={styles.userAvatarWrapper}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  user?.avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user?.name || "مستخدم"
+                  )}&background=4F46E5&color=fff&bold=true`
+                }
+                alt={user?.name || "المستخدم"}
+                className={styles.userAvatarImg}
+              />
+              <span className={styles.onlineDot}></span>
+            </div>
+            <div className={styles.userCardInfo}>
+              <span className={styles.userName}>{user?.name || "المستخدم"}</span>
+              <span className={styles.userEmail}>{user?.email || ""}</span>
+            </div>
+          </div>
           <div
-            className={`${styles.roleBadge} ${role === "admin" ? styles.adminBadge : styles.studentBadge}`}
+            className={`${styles.roleBadge} ${
+              role === "admin" ? styles.adminBadge : styles.studentBadge
+            }`}
           >
             {role === "admin" ? (
               <ShieldAlert size={14} />

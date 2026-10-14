@@ -102,6 +102,112 @@
   gap: 0.85rem;
 }
 
+/* User Profile Chip in Navbar */
+.userProfileBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.45rem;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.userProfileBtn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.12);
+  transform: translateY(-1px);
+}
+
+.userAvatarWrapper {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.userAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.onlineStatus {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 10px;
+  height: 10px;
+  background-color: var(--accent);
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.userName {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userRole {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  margin-top: 1px;
+}
+
+.adminRole {
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.studentRole {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid #E0E7FF;
+}
+
+.dashboardIconWrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  margin-right: 0.15rem;
+}
+
+.userProfileBtn:hover .dashboardIconWrapper {
+  background-color: var(--primary);
+  color: #FFFFFF;
+}
+
+
 .mobileToggle {
   display: none;
   color: var(--text-main);
@@ -132,5 +238,36 @@
   }
   .registerBtn {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .userProfileBtn {
+    padding: 2px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    gap: 0;
+  }
+
+  .userProfileBtn:hover {
+    background: transparent;
+    box-shadow: none;
+    transform: scale(1.05);
+  }
+
+  .userInfo,
+  .dashboardIconWrapper {
+    display: none;
+  }
+
+  .userAvatarWrapper {
+    width: 38px;
+    height: 38px;
+  }
+
+  .userAvatarImg {
+    border: 2px solid var(--primary);
   }
 }

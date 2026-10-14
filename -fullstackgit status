@@ -1,0 +1,13 @@
+warning: in the working copy of 'front-end/src/components/dashboard/DashboardNavbar.jsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/front-end/src/components/dashboard/DashboardNavbar.jsx b/front-end/src/components/dashboard/DashboardNavbar.jsx[m
+[1mindex 3bd455d..9164d06 100644[m
+[1m--- a/front-end/src/components/dashboard/DashboardNavbar.jsx[m
+[1m+++ b/front-end/src/components/dashboard/DashboardNavbar.jsx[m
+[36m@@ -1,6 +1,6 @@[m
+ 'use client';[m
+ [m
+[31m-import { Search, Bell, Menu, RefreshCw, UserCheck } from 'lucide-react';[m
+[32m+[m[32mimport { Search, Bell, Menu } from 'lucide-react';[m
+ import styles from './DashboardNavbar.module.css';[m
+ [m
+ export default function DashboardNavbar({ onToggleSidebar, user }) {[m
