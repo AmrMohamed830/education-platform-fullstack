@@ -1,7 +1,7 @@
 const { body } = require("express-validator");
 
+// Register Validation
 const registerValidation = [
-  // Name Validation
   body("name")
     .isString()
     .withMessage("الاسم يجب أن يكون نصًا")
@@ -13,7 +13,6 @@ const registerValidation = [
     .isLength({ min: 3, max: 50 })
     .withMessage("الاسم يجب أن يكون من 3 إلى 50 حرفًا"),
 
-  // Email Validation
   body("email")
     .isString()
     .withMessage("البريد الإلكتروني يجب أن يكون نصًا")
@@ -28,7 +27,6 @@ const registerValidation = [
     .isEmail()
     .withMessage("يرجى إدخال بريد إلكتروني صحيح"),
 
-  // Password Validation
   body("password")
     .isString()
     .withMessage("كلمة المرور يجب أن تكون نصًا")
@@ -40,4 +38,31 @@ const registerValidation = [
     .withMessage("كلمة المرور يجب أن تكون من 8 إلى 64 حرفًا"),
 ];
 
-module.exports = registerValidation;
+// Login Validation
+const loginValidation = [
+  body("email")
+    .isString()
+    .withMessage("البريد الإلكتروني يجب أن يكون نصًا")
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage("البريد الإلكتروني مطلوب")
+    .bail()
+    .isLength({ max: 254 })
+    .withMessage("البريد الإلكتروني طويل جدًا")
+    .bail()
+    .isEmail()
+    .withMessage("يرجى إدخال بريد إلكتروني صحيح"),
+
+  body("password")
+    .isString()
+    .withMessage("كلمة المرور يجب أن تكون نصًا")
+    .bail()
+    .notEmpty()
+    .withMessage("كلمة المرور مطلوبة"),
+];
+
+module.exports = {
+  registerValidation,
+  loginValidation,
+};

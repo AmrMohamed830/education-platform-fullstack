@@ -7,15 +7,16 @@ const {
   getCurrentUser,
   logout,
 } = require("../controllers/auth.controller");
-const registerValidation = require("../validations/auth.validation");
+const {
+  registerValidation,
+  loginValidation,
+} = require("../validations/auth.validation");
+
 const validateMiddleware = require("../middleware/validate.middleware");
 
+router.route("/register").post(registerValidation, validateMiddleware, register);
 
-router
-        .route("/register")
-        .post(registerValidation, validateMiddleware, register);
-        
-router.route("/login").post(login);
+router.route("/login").post(loginValidation, validateMiddleware, login);
 
 router.route("/me").get(verifyToken, getCurrentUser);
 
