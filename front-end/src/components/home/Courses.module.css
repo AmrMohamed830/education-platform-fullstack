@@ -211,3 +211,49 @@
     gap: 1.25rem;
   }
 }
+
+/* ── State helpers (loading / error / empty) ── */
+.stateWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.stateText {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  color: var(--primary);
+  animation: spin 0.9s linear infinite;
+}
+
+.errorIcon {
+  color: #EF4444;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+}
+
+/* Course description */
+.courseDescription {
+  font-size: 0.875rem;
+  color: var(--text-body);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}

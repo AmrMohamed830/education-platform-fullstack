@@ -1,14 +1,46 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Container from '../common/Container';
 import SectionHeader from '../common/SectionHeader';
 import Button from '../common/Button';
 import StarRating from '../common/StarRating';
-import { featuredCoursesData } from '@/data/courses';
-import { BookOpen, Users, Clock, ArrowLeft, Bookmark } from 'lucide-react';
+import { getAllCourses } from '@/services/course.service';
+import { BookOpen, Users, Clock, ArrowLeft, Bookmark, AlertCircle, Loader2 } from 'lucide-react';
 import styles from './Courses.module.css';
 
+// Gradient palette cycled for cards that have no image
+const GRADIENTS = [
+  'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+  'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
+  'linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%)',
+  'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+  'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+  'linear-gradient(135deg, #6366F1 0%, #EC4899 100%)',
+];
+
 export default function Courses() {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllCourses();
+        setCourses(response.data.data.courses);
+      } catch (err) {
+        setError(err?.response?.data?.message || 'حدث خطأ أثناء تحميل الكورسات.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
   return (
     <section id="courses" className={styles.section}>
       <Container>
@@ -20,79 +52,95 @@ export default function Courses() {
           subtitle="مناهج تفاعلية مُحدثة ومصممة لنقلك من الصفر إلى احتراف العمل في أفضل المشاريع."
         />
 
-        <div className={styles.grid}>
-          {featuredCoursesData.map((course) => (
-            <div key={course.id} className={styles.courseCard}>
-              {/* Card Banner / Header Image Mock */}
-              <div
-                className={styles.imageBanner}
-                style={{ background: course.imageGradient }}
-              >
-                <div className={styles.badgeRow}>
-                  <span className={styles.courseBadge}>{course.badge}</span>
-                  <button className={styles.bookmarkBtn} aria-label="حفظ الكورس">
-                    <Bookmark size={16} />
-                  </button>
-                </div>
-                <div className={styles.levelTag}>{course.level}</div>
-              </div>
+        {/* ── Loading State ── */}
+        {loading && (
+          <div className={styles.stateWrapper}>
+            <Loader2 size={40} className={styles.spinner} />
+            <p className={styles.stateText}>جارٍ تحميل الكورسات…</p>
+          </div>
+        )}
 
-              {/* Card Content */}
-              <div className={styles.cardContent}>
-                <div className={styles.categoryRow}>
-                  <span className={styles.categoryName}>{course.category}</span>
-                  <StarRating rating={course.rating} count={course.ratingCount} />
-                </div>
+        {/* ── Error State ── */}
+        {!loading && error && (
+          <div className={styles.stateWrapper}>
+            <AlertCircle size={40} className={styles.errorIcon} />
+            <p className={styles.stateText}>{error}</p>
+          </div>
+        )}
 
-                <h3 className={styles.courseTitle}>{course.title}</h3>
+        {/* ── Empty State ── */}
+        {!loading && !error && courses.length === 0 && (
+          <div className={styles.stateWrapper}>
+            <BookOpen size={40} className={styles.emptyIcon} />
+            <p className={styles.stateText}>لا توجد كورسات متاحة حالياً.</p>
+          </div>
+        )}
 
-                <div className={styles.instructorInfo}>
-                  <div className={styles.instructorAvatar}>
-                    {course.instructor.charAt(2)}
-                  </div>
-                  <div>
-                    <div className={styles.instructorName}>{course.instructor}</div>
-                    <div className={styles.instructorRole}>{course.instructorRole}</div>
-                  </div>
-                </div>
+        {/* ── Course Cards ── */}
+        {!loading && !error && courses.length > 0 && (
+          <>
+            <div className={styles.grid}>
+              {courses.map((course, index) => {
+                const gradient = GRADIENTS[index % GRADIENTS.length];
+                const avatarChar = course.title?.charAt(0) ?? '؟';
 
-                {/* Tech Tags */}
-                <div className={styles.tagsRow}>
-                  {course.tags.map((tag) => (
-                    <span key={tag} className={styles.tagPill}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Course Details Footer */}
-                <div className={styles.cardFooter}>
-                  <div className={styles.metaGroup}>
-                    <div className={styles.metaItem}>
-                      <Clock size={14} />
-                      <span>{course.duration}</span>
+                return (
+                  <div key={course._id} className={styles.courseCard}>
+                    {/* Card Banner */}
+                    <div
+                      className={styles.imageBanner}
+                      style={
+                        course.image
+                          ? {
+                              backgroundImage: `url(${course.image})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }
+                          : { background: gradient }
+                      }
+                    >
+                      <div className={styles.badgeRow}>
+                        <span className={styles.courseBadge}>كورس</span>
+                        <button className={styles.bookmarkBtn} aria-label="حفظ الكورس">
+                          <Bookmark size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div className={styles.metaItem}>
-                      <Users size={14} />
-                      <span>{course.students}</span>
+
+                    {/* Card Content */}
+                    <div className={styles.cardContent}>
+                      <h3 className={styles.courseTitle}>{course.title}</h3>
+
+                      {course.description && (
+                        <p className={styles.courseDescription}>{course.description}</p>
+                      )}
+
+                      {/* Card Footer */}
+                      <div className={styles.cardFooter}>
+                        <div className={styles.metaGroup}>
+                          <div className={styles.metaItem}>
+                            <BookOpen size={14} />
+                            <span>كورس</span>
+                          </div>
+                        </div>
+
+                        <div className={styles.priceGroup}>
+                          <span className={styles.price}>{course.price} $</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  <div className={styles.priceGroup}>
-                    <span className={styles.price}>{course.price} $</span>
-                    <span className={styles.originalPrice}>{course.originalPrice} $</span>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
 
-        <div className={styles.viewMoreRow}>
-          <Button variant="outline" size="lg" icon={ArrowLeft}>
-            عرض كافة الكورسات والمسارات ({featuredCoursesData.length * 12}+)
-          </Button>
-        </div>
+            <div className={styles.viewMoreRow}>
+              <Button variant="outline" size="lg" icon={ArrowLeft}>
+                عرض كافة الكورسات والمسارات ({courses.length}+)
+              </Button>
+            </div>
+          </>
+        )}
       </Container>
     </section>
   );

@@ -30,7 +30,13 @@ const getCourse = async (req, res) => {
 };
 
 const addCourse = async (req, res) => {
-  const newCourse = new Course(req.body);
+  const { title, description, price, image } = req.body;
+  const newCourse = new Course({
+  title,
+  description,
+  price,
+  image,
+});
   await newCourse.save();
 
   res.status(201).json({ status: "success", data: { course: newCourse } });
@@ -56,6 +62,12 @@ const updateCourse = async (req, res) => {
   if (price !== undefined) updates.price = price;
   if (image !== undefined) updates.image = image;
 
+  if (Object.keys(updates).length === 0) {
+  return res.status(400).json({
+    status: "fail",
+    message: "No valid fields provided for update",
+  });
+}
   // Update course
   const updatedCourse = await Course.findByIdAndUpdate(
     courseId,

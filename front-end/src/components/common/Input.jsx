@@ -39,6 +39,8 @@ export default function Input({
           name={name}
           type={inputType}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
           className={cn(
             styles.input,
             Icon && styles.hasIconStart,

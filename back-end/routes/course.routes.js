@@ -22,4 +22,6 @@ router.route("/")
 router.route('/:courseId')
 .get(getCourse)
 .patch(verifyToken,allowedTo(userRoles.ADMIN),updateCourse)
-.delete(verifyToken,allowedTo(userRoles.ADMIN),deleteCourse)
+.delete(verifyToken,allowedTo(userRoles.ADMIN),deleteCourse);
+
+module.exports = router;
