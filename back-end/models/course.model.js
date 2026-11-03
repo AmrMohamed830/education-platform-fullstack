@@ -24,6 +24,24 @@ const courseSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    instructor: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "draft"],
+      default: "active",
+    },
   },
   {
     timestamps: true,

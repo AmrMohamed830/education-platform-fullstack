@@ -6,26 +6,32 @@ import Input from '../common/Input';
 import Button from '../common/Button';
 import styles from './CourseModal.module.css';
 
-export default function CourseModal({ isOpen, onClose, onSave, initialData = null }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    instructor: '',
-    category: '',
-    price: '',
-    status: 'نشط',
-  });
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  instructor: '',
+  category: 'تطوير الويب',
+  price: '',
+  image: '',
+  status: 'active',
+};
+
+export default function CourseModal({ isOpen, onClose, onSave, initialData = null, isSaving = false }) {
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
-    } else {
       setFormData({
-        title: '',
-        instructor: '',
-        category: 'تطوير الويب',
-        price: '199$',
-        status: 'نشط',
+        title: initialData.title || '',
+        description: initialData.description || '',
+        instructor: initialData.instructor || '',
+        category: initialData.category || 'تطوير الويب',
+        price: initialData.price !== undefined ? String(initialData.price) : '',
+        image: initialData.image || '',
+        status: initialData.status || 'active',
       });
+    } else {
+      setFormData(EMPTY_FORM);
     }
   }, [initialData, isOpen]);
 
@@ -36,8 +42,15 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
-    onClose();
+    onSave({
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      instructor: formData.instructor.trim(),
+      category: formData.category,
+      price: Number(formData.price),
+      image: formData.image.trim(),
+      status: formData.status,
+    });
   };
 
   return (
@@ -47,6 +60,7 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
       title={initialData ? 'تعديل بيانات الكورس' : 'إضافة كورس جديد'}
     >
       <form onSubmit={handleSubmit} className={styles.form}>
+        {/* Title */}
         <Input
           label="عنوان الكورس"
           name="title"
@@ -56,6 +70,21 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
           required
         />
 
+        {/* Description */}
+        <div className={styles.textareaGroup}>
+          <label className={styles.label}>وصف الكورس</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="اكتب وصفاً مختصراً للكورس..."
+            className={styles.textarea}
+            rows={3}
+            required
+          />
+        </div>
+
+        {/* Instructor + Category */}
         <div className={styles.row}>
           <Input
             label="اسم المدرب"
@@ -73,22 +102,27 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
               value={formData.category}
               onChange={handleChange}
               className={styles.select}
+              required
             >
               <option value="تطوير الويب">تطوير الويب</option>
               <option value="الذكاء الاصطناعي">الذكاء الاصطناعي</option>
               <option value="تصميم الواجهات">تصميم الواجهات</option>
-              <option value="DevOps">DevOps & السيرفرات</option>
+              <option value="DevOps">DevOps &amp; السيرفرات</option>
+              <option value="الأمن السيبراني">الأمن السيبراني</option>
             </select>
           </div>
         </div>
 
+        {/* Price + Status */}
         <div className={styles.row}>
           <Input
             label="سعر الكورس ($)"
             name="price"
+            type="number"
+            min="0"
             value={formData.price}
             onChange={handleChange}
-            placeholder="199$"
+            placeholder="199"
             required
           />
 
@@ -100,18 +134,28 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
               onChange={handleChange}
               className={styles.select}
             >
-              <option value="نشط">نشط (Active)</option>
-              <option value="مسودة">مسودة (Draft)</option>
+              <option value="active">نشط (Active)</option>
+              <option value="draft">مسودة (Draft)</option>
             </select>
           </div>
         </div>
 
+        {/* Image URL */}
+        <Input
+          label="رابط صورة الكورس (اختياري)"
+          name="image"
+          value={formData.image}
+          onChange={handleChange}
+          placeholder="https://example.com/course-image.jpg"
+        />
+
+        {/* Actions */}
         <div className={styles.actions}>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             إلغاء
           </Button>
-          <Button type="submit" variant="primary">
-            {initialData ? 'حفظ التعديلات' : 'إضافة الكورس'}
+          <Button type="submit" variant="primary" disabled={isSaving}>
+            {isSaving ? 'جارٍ الحفظ...' : initialData ? 'حفظ التعديلات' : 'إضافة الكورس'}
           </Button>
         </div>
       </form>

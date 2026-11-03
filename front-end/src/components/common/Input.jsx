@@ -9,7 +9,7 @@ export default function Input({
   label,
   type = 'text',
   placeholder,
-  value,
+  value = '',
   onChange,
   error = '',
   icon: Icon = null,

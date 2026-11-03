@@ -1,32 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminDashboardData } from '@/data/dashboardData';
+import { getAllCourses, addCourse, updateCourse, deleteCourse } from '@/services/course.service';
 import Button from '../common/Button';
 import CourseModal from './CourseModal';
-import { 
-  BookOpen, 
-  Users, 
-  DollarSign, 
-  GraduationCap, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Search, 
+import {
+  BookOpen,
+  Users,
+  DollarSign,
+  GraduationCap,
+  Plus,
+  Edit3,
+  Trash2,
+  Search,
   CheckCircle,
-  TrendingUp,
-  ShieldCheck
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import styles from './AdminView.module.css';
 
+// Keep mock stats and students — real enrollment/payment systems are out of scope
+const { stats, recentStudents } = adminDashboardData;
+
+// Map backend status value to Arabic display label
+const statusLabel = (status) => (status === 'active' ? 'نشط' : 'مسودة');
+
 export default function AdminView() {
-  const { stats, coursesList: initialCourses, recentStudents } = adminDashboardData;
-  const [courses, setCourses] = useState(initialCourses);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
-  const [alertMsg, setAlertMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
+  const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
+
+  // ── Fetch all courses from backend ──────────────────────────────────
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      setFetchError('');
+      const response = await getAllCourses();
+      setCourses(response.data.data.courses);
+    } catch {
+      setFetchError('تعذّر تحميل الكورسات. يرجى المحاولة مجدداً.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  // ── Alert helper ────────────────────────────────────────────────────
+  const showAlert = (text, type = 'success') => {
+    setAlertMsg({ text, type });
+    setTimeout(() => setAlertMsg({ text: '', type: 'success' }), 3500);
+  };
+
+  // ── Modal helpers ───────────────────────────────────────────────────
   const handleOpenAddModal = () => {
     setEditingCourse(null);
     setIsModalOpen(true);
@@ -37,41 +73,52 @@ export default function AdminView() {
     setIsModalOpen(true);
   };
 
-  const handleSaveCourse = (savedData) => {
-    if (editingCourse) {
-      setCourses((prev) =>
-        prev.map((c) => (c.id === editingCourse.id ? { ...c, ...savedData } : c))
-      );
-      showAlert('تم تعديل بيانات الكورس بنجاح!');
-    } else {
-      const newCourse = {
-        id: `adm-${Date.now()}`,
-        studentsCount: 0,
-        createdAt: new Date().toISOString().split('T')[0],
-        ...savedData,
-      };
-      setCourses((prev) => [newCourse, ...prev]);
-      showAlert('تمت إضافة الكورس الجديد بنجاح!');
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCourse(null);
+  };
+
+  // ── Save (add or update) ────────────────────────────────────────────
+  const handleSaveCourse = async (formData) => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      if (editingCourse) {
+        await updateCourse(editingCourse._id, formData);
+        showAlert('تم تعديل بيانات الكورس بنجاح! ✏️');
+      } else {
+        await addCourse(formData);
+        showAlert('تمت إضافة الكورس الجديد بنجاح! 🎉');
+      }
+      handleCloseModal();
+      await fetchCourses();
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'حدث خطأ أثناء حفظ الكورس.';
+      showAlert(msg, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDeleteCourse = (courseId) => {
-    if (window.confirm('هل أنت تأكد من رغبتك في حذف هذا الكورس؟')) {
-      setCourses((prev) => prev.filter((c) => c.id !== courseId));
-      showAlert('تم حذف الكورس بنجاح!');
+  // ── Delete ──────────────────────────────────────────────────────────
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا الكورس؟')) return;
+    try {
+      await deleteCourse(courseId);
+      showAlert('تم حذف الكورس بنجاح! 🗑️');
+      await fetchCourses();
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'حدث خطأ أثناء حذف الكورس.';
+      showAlert(msg, 'error');
     }
   };
 
-  const showAlert = (msg) => {
-    setAlertMsg(msg);
-    setTimeout(() => setAlertMsg(''), 3000);
-  };
-
+  // ── Search filter ───────────────────────────────────────────────────
   const filteredCourses = courses.filter(
     (c) =>
-      c.title.includes(searchQuery) ||
-      c.instructor.includes(searchQuery) ||
-      c.category.includes(searchQuery)
+      (c.title || '').includes(searchQuery) ||
+      (c.instructor || '').includes(searchQuery) ||
+      (c.category || '').includes(searchQuery),
   );
 
   return (
@@ -89,15 +136,23 @@ export default function AdminView() {
         </Button>
       </div>
 
-      {/* Flash Success Notification */}
-      {alertMsg && (
-        <div className={styles.alertSuccess}>
-          <CheckCircle size={18} />
-          <span>{alertMsg}</span>
+      {/* Flash Alert */}
+      {alertMsg.text && (
+        <div
+          className={
+            alertMsg.type === 'error' ? styles.alertError : styles.alertSuccess
+          }
+        >
+          {alertMsg.type === 'error' ? (
+            <AlertCircle size={18} />
+          ) : (
+            <CheckCircle size={18} />
+          )}
+          <span>{alertMsg.text}</span>
         </div>
       )}
 
-      {/* KPI Stats Grid */}
+      {/* KPI Stats Grid — totals from mock pending real enrollment/payment APIs */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
@@ -107,7 +162,7 @@ export default function AdminView() {
             </div>
           </div>
           <div className={styles.statVal}>{courses.length}</div>
-          <div className={styles.statSub}>+4 كورسات هذا الشهر</div>
+          <div className={styles.statSub}>كورسات في قاعدة البيانات</div>
         </div>
 
         <div className={styles.statCard}>
@@ -164,67 +219,96 @@ export default function AdminView() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className={styles.stateWrapper}>
+            <Loader2 size={32} className={styles.spinner} />
+            <span>جارٍ تحميل الكورسات…</span>
+          </div>
+        )}
+
+        {/* Fetch error state */}
+        {!loading && fetchError && (
+          <div className={styles.stateWrapper}>
+            <AlertCircle size={32} className={styles.errorIcon} />
+            <span>{fetchError}</span>
+            <Button variant="outline" onClick={fetchCourses}>
+              إعادة المحاولة
+            </Button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !fetchError && filteredCourses.length === 0 && (
+          <div className={styles.stateWrapper}>
+            <BookOpen size={32} className={styles.emptyIcon} />
+            <span>
+              {searchQuery ? 'لا توجد نتائج للبحث.' : 'لا توجد كورسات حتى الآن. أضف أول كورس!'}
+            </span>
+          </div>
+        )}
+
         {/* Courses Table */}
-        <div className={styles.tableResponsive}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>اسم الكورس</th>
-                <th>المدرب</th>
-                <th>المجال</th>
-                <th>عدد الطلاب</th>
-                <th>السعر</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.map((course) => (
-                <tr key={course.id}>
-                  <td>
-                    <span className={styles.courseTitleCell}>{course.title}</span>
-                  </td>
-                  <td>{course.instructor}</td>
-                  <td>
-                    <span className={styles.catBadge}>{course.category}</span>
-                  </td>
-                  <td>{course.studentsCount} طالب</td>
-                  <td className={styles.priceCell}>{course.price}</td>
-                  <td>
-                    <span
-                      className={`${styles.statusPill} ${
-                        course.status === 'نشط' ? styles.statusActive : styles.statusDraft
-                      }`}
-                    >
-                      {course.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.actionBtns}>
-                      <button
-                        className={styles.editBtn}
-                        onClick={() => handleOpenEditModal(course)}
-                        title="تعديل الكورس"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        className={styles.deleteBtn}
-                        onClick={() => handleDeleteCourse(course.id)}
-                        title="حذف الكورس"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
+        {!loading && !fetchError && filteredCourses.length > 0 && (
+          <div className={styles.tableResponsive}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>اسم الكورس</th>
+                  <th>المدرب</th>
+                  <th>المجال</th>
+                  <th>السعر</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredCourses.map((course) => (
+                  <tr key={course._id}>
+                    <td>
+                      <span className={styles.courseTitleCell}>{course.title}</span>
+                    </td>
+                    <td>{course.instructor || '—'}</td>
+                    <td>
+                      <span className={styles.catBadge}>{course.category || '—'}</span>
+                    </td>
+                    <td className={styles.priceCell}>${course.price}</td>
+                    <td>
+                      <span
+                        className={`${styles.statusPill} ${
+                          course.status === 'active' ? styles.statusActive : styles.statusDraft
+                        }`}
+                      >
+                        {statusLabel(course.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.actionBtns}>
+                        <button
+                          className={styles.editBtn}
+                          onClick={() => handleOpenEditModal(course)}
+                          title="تعديل الكورس"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          className={styles.deleteBtn}
+                          onClick={() => handleDeleteCourse(course._id)}
+                          title="حذف الكورس"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Recent Registered Students Table */}
+      {/* Recent Registered Students Table — mock data, enrollment system out of scope */}
       <div className={styles.sectionCard}>
         <div className={styles.tableHeader}>
           <div>
@@ -262,9 +346,10 @@ export default function AdminView() {
       {/* Add/Edit Modal */}
       <CourseModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSave={handleSaveCourse}
         initialData={editingCourse}
+        isSaving={isSaving}
       />
     </div>
   );

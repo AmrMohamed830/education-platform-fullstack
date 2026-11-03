@@ -30,21 +30,43 @@ const getCourse = async (req, res) => {
 };
 
 const addCourse = async (req, res) => {
-  const { title, description, price, image } = req.body;
+  const { title, description, price, image, instructor, category, status } = req.body;
+
+  // Validate required fields
+  if (!title || !description || !instructor || !category) {
+    return res.status(400).json({
+      status: "fail",
+      message: "title, description, instructor, and category are required",
+    });
+  }
+
+  const parsedPrice = Number(price);
+  if (price === undefined || price === "" || isNaN(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({
+      status: "fail",
+      message: "price must be a valid non-negative number",
+    });
+  }
+
   const newCourse = new Course({
-  title,
-  description,
-  price,
-  image,
-});
+    title,
+    description,
+    price: parsedPrice,
+    image: image || "",
+    instructor,
+    category,
+    status: status || "active",
+  });
+
   await newCourse.save();
 
   res.status(201).json({ status: "success", data: { course: newCourse } });
 };
+
 const updateCourse = async (req, res) => {
   const courseId = req.params.courseId;
 
-  // Check if ID is valid
+  // Validate ObjectId
   if (!mongoose.isValidObjectId(courseId)) {
     return res.status(400).json({
       status: "fail",
@@ -52,23 +74,37 @@ const updateCourse = async (req, res) => {
     });
   }
 
-  // Get allowed fields
-  const { title, description, price, image } = req.body;
+  const { title, description, price, image, instructor, category, status } = req.body;
 
   const updates = {};
 
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
-  if (price !== undefined) updates.price = price;
   if (image !== undefined) updates.image = image;
+  if (instructor !== undefined) updates.instructor = instructor;
+  if (category !== undefined) updates.category = category;
+  if (status !== undefined) updates.status = status;
+
+  // Validate and convert price when provided
+  if (price !== undefined) {
+    const parsedPrice = Number(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        status: "fail",
+        message: "price must be a valid non-negative number",
+      });
+    }
+    updates.price = parsedPrice;
+  }
 
   if (Object.keys(updates).length === 0) {
-  return res.status(400).json({
-    status: "fail",
-    message: "No valid fields provided for update",
-  });
-}
-  // Update course
+    return res.status(400).json({
+      status: "fail",
+      message: "No valid fields provided for update",
+    });
+  }
+
+  // Update course with validators
   const updatedCourse = await Course.findByIdAndUpdate(
     courseId,
     { $set: updates },
@@ -94,8 +130,6 @@ const updateCourse = async (req, res) => {
   });
 };
 
-
-
 const deleteCourse = async (req, res) => {
   const courseId = req.params.courseId;
 
@@ -120,4 +154,5 @@ const deleteCourse = async (req, res) => {
     data: null,
   });
 };
-module.exports = { getAllCourses, getCourse, addCourse, updateCourse,deleteCourse };
+
+module.exports = { getAllCourses, getCourse, addCourse, updateCourse, deleteCourse };
