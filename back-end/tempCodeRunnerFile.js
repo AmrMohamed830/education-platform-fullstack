@@ -16,10 +16,12 @@ app.use(cors({
 app.use(express.json());
 
 const authRoutes=require("./routes/auth.routes")
-
-
+const courseRoutes = require("./routes/course.routes");
+const enrollmentRoutes = require("./routes/enrollment.routes");
 
 app.use("/auth", authRoutes);
+app.use("/courses", courseRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
 
 const url = process.env.MONGO_URL;
 
