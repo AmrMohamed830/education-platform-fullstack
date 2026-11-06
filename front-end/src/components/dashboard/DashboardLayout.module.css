@@ -1,0 +1,33 @@
+.wrapper {
+  min-height: 100vh;
+  display: flex;
+  background-color: var(--bg-main);
+  direction: rtl;
+}
+
+.mainContainer {
+  flex: 1;
+  margin-right: 270px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin 0.3s ease;
+}
+
+.contentArea {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 992px) {
+  .mainContainer {
+    margin-right: 0;
+  }
+  .contentArea {
+    padding: 1.25rem;
+  }
+}

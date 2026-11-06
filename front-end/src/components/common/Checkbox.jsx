@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { Check } from 'lucide-react';
-import { cn } from '@/utils/cn';
+import { Check } from "lucide-react";
+import { cn } from "@/utils/cn";
+import styles from "./Checkbox.module.css";
 
 export default function Checkbox({
   label,
@@ -9,13 +10,13 @@ export default function Checkbox({
   onChange,
   id,
   name,
-  className = '',
+  className = "",
   ...props
 }) {
   return (
     <label
       htmlFor={id || name}
-      className={cn('group inline-flex items-center gap-2.5 cursor-pointer select-none', className)}
+      className={cn(styles.container, className)}
     >
       <input
         type="checkbox"
@@ -23,20 +24,24 @@ export default function Checkbox({
         name={name}
         checked={checked}
         onChange={onChange}
-        className="sr-only"
+        className={styles.hiddenCheckbox}
         {...props}
       />
 
       <div
         className={cn(
-          'w-5 h-5 rounded-md border-[1.5px] border-[var(--border-hover)] bg-white flex items-center justify-center transition-all duration-200 group-hover:border-[var(--primary)]',
-          checked && 'bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] border-[var(--primary)]'
+          styles.styledCheckbox,
+          checked && styles.checked
         )}
       >
-        {checked && <Check size={14} className="text-white" />}
+        {checked && (
+          <Check size={14} className={styles.checkIcon} />
+        )}
       </div>
 
-      {label && <span className="text-sm font-semibold text-[var(--text-body)]">{label}</span>}
+      {label && (
+        <span className={styles.label}>{label}</span>
+      )}
     </label>
   );
 }

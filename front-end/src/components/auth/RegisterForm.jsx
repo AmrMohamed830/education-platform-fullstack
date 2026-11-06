@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   User,
   Mail,
@@ -10,21 +10,22 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle2,
-} from 'lucide-react';
-import Input from '../common/Input';
-import Checkbox from '../common/Checkbox';
-import Button from '../common/Button';
-import { useRegister } from '@/hooks/mutations/useAuthMutations';
-import { useRouter } from 'next/navigation';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema } from '../../validations/register.schema';
-import { useForm, Controller } from 'react-hook-form';
+} from "lucide-react";
+import Input from "../common/Input";
+import Checkbox from "../common/Checkbox";
+import Button from "../common/Button";
+import styles from "./RegisterForm.module.css";
+import { registerUser } from "../../services/auth.service";
+import useAuthStore from "@/store/auth.store";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registerSchema } from "../../validations/register.schema";
+import { useForm, Controller } from "react-hook-form";
 
 export default function RegisterForm() {
+  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [generalError, setGeneralError] = useState('');
-  const registerMutation = useRegister();
-  const isLoading = registerMutation.isPending;
+  const [generalError, setGeneralError] = useState("");
 
   const {
     register,
@@ -34,22 +35,25 @@ export default function RegisterForm() {
   } = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
       acceptTerms: false,
     },
   });
+
+  const { setUser } = useAuthStore();
 
   const router = useRouter();
 
   const onSubmit = async (data) => {
     if (isLoading || isSuccess) return;
-    setGeneralError('');
+    setIsLoading(true);
+    setGeneralError("");
 
     try {
-      await registerMutation.mutateAsync({
+      const response = await registerUser({
         name: data.fullName.trim(),
         email: data.email.trim(),
         password: data.password,
@@ -57,44 +61,46 @@ export default function RegisterForm() {
 
       setIsSuccess(true);
 
+      // Smooth transition to dashboard without leaving /register in browser history
       setTimeout(() => {
-        router.replace('/dashboard');
+        setUser(response.data.data.user);
+        router.replace("/dashboard");
       }, 900);
     } catch (err) {
       if (err.response?.status === 409) {
-        setGeneralError('هذا البريد الإلكتروني مسجل بالفعل');
+        setGeneralError("هذا البريد الإلكتروني مسجل بالفعل");
       } else {
-        setGeneralError('حدثت مشكلة أثناء إنشاء الحساب. حاول مرة أخرى');
+        setGeneralError("حدثت مشكلة أثناء إنشاء الحساب. حاول مرة أخرى");
       }
+      setIsLoading(false);
     }
   };
 
+  // ── Success Creative Screen ─────────────────────────────────────────
   if (isSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+      <div className={styles.successCard}>
+        <div className={styles.successIconWrapper}>
           <CheckCircle2 size={42} strokeWidth={2.4} />
         </div>
-        <h3 className="text-xl font-extrabold text-[var(--text-main)] mb-2">
-          تم إنشاء الحساب بنجاح! 🎉
-        </h3>
-        <p className="text-sm text-[var(--text-muted)] max-w-sm mb-6 leading-relaxed">
+        <h3 className={styles.successTitle}>تم إنشاء الحساب بنجاح! 🎉</h3>
+        <p className={styles.successSubtitle}>
           مرحباً بك في مَنصّتِي! يتم الآن تجهيز مساحتك التعليمية ونقلك إلى لوحة التحكم...
         </p>
-        <div className="w-full max-w-[200px] h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-          <div className="h-full bg-emerald-500 rounded-full animate-pulse w-full" />
+        <div className={styles.redirectBarContainer}>
+          <div className={styles.redirectBarFill} />
         </div>
-        <span className="text-xs text-[var(--text-muted)]">لحظات وسنكون هناك...</span>
+        <span className={styles.redirectHint}>لحظات وسنكون هناك...</span>
       </div>
     );
   }
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
       {/* General Alert */}
       {generalError && (
-        <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold">
-          <AlertCircle size={18} className="shrink-0" />
+        <div className={styles.alertError}>
+          <AlertCircle size={18} />
           <span>{generalError}</span>
         </div>
       )}
@@ -109,9 +115,8 @@ export default function RegisterForm() {
         icon={User}
         disabled={isLoading}
         required
-        {...register('fullName')}
+        {...register("fullName")}
       />
-
       {/* Email Input */}
       <Input
         label="البريد الإلكتروني"
@@ -122,9 +127,8 @@ export default function RegisterForm() {
         icon={Mail}
         disabled={isLoading}
         required
-        {...register('email')}
+        {...register("email")}
       />
-
       {/* Password Input */}
       <Input
         label="كلمة المرور"
@@ -135,7 +139,7 @@ export default function RegisterForm() {
         icon={Lock}
         disabled={isLoading}
         required
-        {...register('password')}
+        {...register("password")}
       />
 
       {/* Confirm Password Input */}
@@ -148,11 +152,10 @@ export default function RegisterForm() {
         icon={ShieldCheck}
         disabled={isLoading}
         required
-        {...register('confirmPassword')}
+        {...register("confirmPassword")}
       />
-
       {/* Terms and Conditions Checkbox */}
-      <div className="flex flex-col gap-1 my-1">
+      <div className={styles.termsRow}>
         <Controller
           name="acceptTerms"
           control={control}
@@ -168,7 +171,9 @@ export default function RegisterForm() {
         />
 
         {errors.acceptTerms && (
-          <span className="text-xs text-red-500 font-semibold">{errors.acceptTerms.message}</span>
+          <span className={styles.errorMessage}>
+            {errors.acceptTerms.message}
+          </span>
         )}
       </div>
 
@@ -180,8 +185,9 @@ export default function RegisterForm() {
         fullWidth
         icon={isLoading ? Loader2 : UserPlus}
         disabled={isLoading}
+        className={isLoading ? styles.loadingBtn : ""}
       >
-        {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب جديد'}
+        {isLoading ? "جاري إنشاء الحساب..." : "إنشاء حساب جديد"}
       </Button>
     </form>
   );

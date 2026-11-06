@@ -2,6 +2,7 @@
 
 import Badge from './Badge';
 import { cn } from '@/utils/cn';
+import styles from './SectionHeader.module.css';
 
 export default function SectionHeader({
   badgeText,
@@ -13,27 +14,17 @@ export default function SectionHeader({
   className = '',
 }) {
   return (
-    <div
-      className={cn(
-        'mb-10 md:mb-14 max-w-[720px]',
-        centered && 'mx-auto text-center',
-        className
-      )}
-    >
+    <div className={cn(styles.header, centered && styles.centered, className)}>
       {badgeText && (
-        <Badge variant="glow" icon={badgeIcon} className="mb-4">
+        <Badge variant="glow" icon={badgeIcon} className={styles.badge}>
           {badgeText}
         </Badge>
       )}
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-[var(--text-main)] mb-3">
+      <h2 className={styles.title}>
         {title}{' '}
         {highlightText && <span className="gradient-text">{highlightText}</span>}
       </h2>
-      {subtitle && (
-        <p className="text-base md:text-lg text-[var(--text-muted)] leading-relaxed">
-          {subtitle}
-        </p>
-      )}
+      {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
     </div>
   );
 }

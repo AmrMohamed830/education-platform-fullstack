@@ -1,32 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800;900&display=swap');
-@import "tailwindcss";
-
-@theme {
-  --font-arabic: 'Cairo', 'Alexandria', system-ui, -apple-system, sans-serif;
-  --font-sans: 'Cairo', 'Alexandria', system-ui, -apple-system, sans-serif;
-
-  --color-primary: #4F46E5;
-  --color-primary-hover: #4338CA;
-  --color-primary-light: #EEF2FF;
-  --color-primary-glow: rgba(79, 70, 229, 0.25);
-
-  --color-secondary: #6366F1;
-  --color-accent: #10B981;
-  --color-accent-light: #ECFDF5;
-  --color-cyan-accent: #06B6D4;
-
-  --color-bg-main: #F8FAFC;
-  --color-bg-card: #FFFFFF;
-  --color-bg-dark: #0F172A;
-
-  --color-text-main: #0F172A;
-  --color-text-body: #334155;
-  --color-text-muted: #64748B;
-  --color-text-light: #94A3B8;
-
-  --color-border-light: #E2E8F0;
-  --color-border-hover: #CBD5E1;
-}
 
 :root {
   /* Color Palette - Educational & Tech High Quality Theme */

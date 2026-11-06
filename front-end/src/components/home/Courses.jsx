@@ -1,12 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Container from '../common/Container';
 import SectionHeader from '../common/SectionHeader';
 import Button from '../common/Button';
-import { useCourses } from '@/hooks/queries/useCourses';
-import { BookOpen, Users, ArrowLeft, Bookmark, AlertCircle, Loader2 } from 'lucide-react';
+import StarRating from '../common/StarRating';
+import { getAllCourses } from '@/services/course.service';
+import { BookOpen, Users, Clock, ArrowLeft, Bookmark, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import styles from './Courses.module.css';
 
+// Gradient palette cycled for cards that have no image
 const GRADIENTS = [
   'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
   'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
@@ -17,12 +21,29 @@ const GRADIENTS = [
 ];
 
 export default function Courses() {
-  const { data, isLoading: loading, error: queryError } = useCourses();
-  const courses = data?.courses || [];
-  const error = queryError?.response?.data?.message || (queryError ? 'حدث خطأ أثناء تحميل الكورسات.' : null);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllCourses();
+        setCourses(response.data.data.courses);
+      } catch (err) {
+        setError(err?.response?.data?.message || 'حدث خطأ أثناء تحميل الكورسات.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
   return (
-    <section id="courses" className="py-20 bg-white border-t border-[var(--border-light)]">
+    <section id="courses" className={styles.section}>
       <Container>
         <SectionHeader
           badgeText="الكورسات الأكثر طلباً"
@@ -34,44 +55,41 @@ export default function Courses() {
 
         {/* ── Loading State ── */}
         {loading && (
-          <div className="flex flex-col items-center justify-center p-16 text-center">
-            <Loader2 size={40} className="animate-spin text-[var(--primary)] mb-4" />
-            <p className="text-base font-semibold text-[var(--text-muted)]">جارٍ تحميل الكورسات…</p>
+          <div className={styles.stateWrapper}>
+            <Loader2 size={40} className={styles.spinner} />
+            <p className={styles.stateText}>جارٍ تحميل الكورسات…</p>
           </div>
         )}
 
         {/* ── Error State ── */}
         {!loading && error && (
-          <div className="flex flex-col items-center justify-center p-16 text-center">
-            <AlertCircle size={40} className="text-red-500 mb-4" />
-            <p className="text-base font-semibold text-red-600">{error}</p>
+          <div className={styles.stateWrapper}>
+            <AlertCircle size={40} className={styles.errorIcon} />
+            <p className={styles.stateText}>{error}</p>
           </div>
         )}
 
         {/* ── Empty State ── */}
         {!loading && !error && courses.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-16 text-center">
-            <BookOpen size={40} className="text-slate-300 mb-4" />
-            <p className="text-base font-semibold text-[var(--text-muted)]">لا توجد كورسات متاحة حالياً.</p>
+          <div className={styles.stateWrapper}>
+            <BookOpen size={40} className={styles.emptyIcon} />
+            <p className={styles.stateText}>لا توجد كورسات متاحة حالياً.</p>
           </div>
         )}
 
         {/* ── Course Cards ── */}
         {!loading && !error && courses.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <div className={styles.grid}>
               {courses.map((course, index) => {
                 const gradient = GRADIENTS[index % GRADIENTS.length];
 
                 return (
-                  <div
-                    key={course._id}
-                    className="flex flex-col bg-white border border-[var(--border-light)] rounded-3xl overflow-hidden hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 text-right"
-                  >
+                  <div key={course._id} className={styles.courseCard}>
                     {/* Card Banner */}
                     <Link
                       href={`/courses/${course._id}`}
-                      className="h-48 relative p-4 flex flex-col justify-between no-underline"
+                      className={styles.imageBanner}
                       style={
                         course.image
                           ? {
@@ -82,13 +100,13 @@ export default function Courses() {
                           : { background: gradient }
                       }
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold py-1 px-3 bg-white/90 backdrop-blur-md text-[var(--text-main)] rounded-full shadow-sm">
+                      <div className={styles.badgeRow}>
+                        <span className={styles.courseBadge}>
                           {course.category || 'كورس'}
                         </span>
                         <button
                           type="button"
-                          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-[var(--text-main)] hover:text-[var(--primary)] transition-colors shadow-sm"
+                          className={styles.bookmarkBtn}
                           aria-label="حفظ الكورس"
                           onClick={(e) => e.preventDefault()}
                         >
@@ -98,36 +116,31 @@ export default function Courses() {
                     </Link>
 
                     {/* Card Content */}
-                    <div className="p-6 flex flex-col flex-1">
-                      <Link
-                        href={`/courses/${course._id}`}
-                        className="no-underline text-inherit hover:text-[var(--primary)] transition-colors"
-                      >
-                        <h3 className="text-lg font-extrabold text-[var(--text-main)] mb-2 line-clamp-2">
-                          {course.title}
-                        </h3>
+                    <div className={styles.cardContent}>
+                      <Link href={`/courses/${course._id}`} className={styles.titleLink}>
+                        <h3 className={styles.courseTitle}>{course.title}</h3>
                       </Link>
 
                       {course.instructor && (
-                        <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-semibold mb-3">
+                        <div className={styles.instructorRow}>
                           <Users size={14} />
                           <span>المدرب: {course.instructor}</span>
                         </div>
                       )}
 
                       {course.description && (
-                        <p className="text-xs text-[var(--text-body)] leading-relaxed mb-6 line-clamp-2 flex-1">
-                          {course.description}
-                        </p>
+                        <p className={styles.courseDescription}>{course.description}</p>
                       )}
 
                       {/* Card Footer with Price and Action Button */}
-                      <div className="flex items-center justify-between pt-4 border-t border-[var(--border-light)] mt-auto">
-                        <span className="text-lg font-black text-[var(--primary)]">
-                          {course.price === 0 ? 'مجاناً' : `${course.price} $`}
-                        </span>
+                      <div className={styles.cardFooter}>
+                        <div className={styles.priceGroup}>
+                          <span className={styles.price}>
+                            {course.price === 0 ? 'مجاناً' : `${course.price} $`}
+                          </span>
+                        </div>
 
-                        <Link href={`/courses/${course._id}`} className="no-underline">
+                        <Link href={`/courses/${course._id}`} style={{ textDecoration: 'none' }}>
                           <Button variant="outline" size="sm" icon={ArrowLeft}>
                             تفاصيل واشتراك
                           </Button>
@@ -139,8 +152,8 @@ export default function Courses() {
               })}
             </div>
 
-            <div className="flex justify-center mt-12">
-              <Link href="/courses" className="no-underline">
+            <div className={styles.viewMoreRow}>
+              <Link href="/courses" style={{ textDecoration: 'none' }}>
                 <Button variant="outline" size="lg" icon={ArrowLeft}>
                   عرض كافة الكورسات والمسارات ({courses.length}+)
                 </Button>

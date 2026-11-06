@@ -6,6 +6,7 @@ import Input from '../common/Input';
 import Button from '../common/Button';
 import { AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { uploadCourseImage } from '../../services/upload.service';
+import styles from './CourseModal.module.css';
 
 const EMPTY_FORM = {
   title: '',
@@ -83,11 +84,11 @@ export default function CourseModal({
       onClose={onClose}
       title={initialData ? 'تعديل بيانات الكورس' : 'إضافة كورس جديد'}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-right">
+      <form onSubmit={handleSubmit} className={styles.form}>
         {/* Error inside modal */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold">
-            <AlertCircle size={18} className="shrink-0" />
+          <div className={styles.modalError}>
+            <AlertCircle size={18} />
             <span>{error}</span>
           </div>
         )}
@@ -103,21 +104,21 @@ export default function CourseModal({
         />
 
         {/* Description */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-slate-700">وصف الكورس</label>
+        <div className={styles.textareaGroup}>
+          <label className={styles.label}>وصف الكورس</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
             placeholder="اكتب وصفاً مختصراً للكورس..."
-            className="w-full p-3 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
+            className={styles.textarea}
             rows={3}
             required
           />
         </div>
 
         {/* Instructor + Category */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={styles.row}>
           <Input
             label="اسم المدرب"
             name="instructor"
@@ -127,13 +128,13 @@ export default function CourseModal({
             required
           />
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700">المجال التعليمي</label>
+          <div className={styles.selectGroup}>
+            <label className={styles.label}>المجال التعليمي</label>
             <select
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full py-2.5 px-3 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all cursor-pointer"
+              className={styles.select}
               required
             >
               <option value="تطوير الويب">تطوير الويب</option>
@@ -146,7 +147,7 @@ export default function CourseModal({
         </div>
 
         {/* Price + Status */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={styles.row}>
           <Input
             label="سعر الكورس ($)"
             name="price"
@@ -158,13 +159,13 @@ export default function CourseModal({
             required
           />
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700">الحالة</label>
+          <div className={styles.selectGroup}>
+            <label className={styles.label}>الحالة</label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full py-2.5 px-3 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all cursor-pointer"
+              className={styles.select}
             >
               <option value="active">نشط (Active)</option>
               <option value="draft">مسودة (Draft)</option>
@@ -173,7 +174,7 @@ export default function CourseModal({
         </div>
 
         {/* Image URL & File Upload */}
-        <div className="flex flex-col gap-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <Input
             label="رابط صورة الكورس (أو ارفع ملف من جهازك)"
             name="image"
@@ -181,16 +182,28 @@ export default function CourseModal({
             onChange={handleChange}
             placeholder="https://example.com/course-image.jpg"
           />
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage}
-              className="inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '0.5rem',
+                border: '1.5px dashed #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#475569',
+                fontSize: '0.825rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
               {uploadingImage ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                   <span>جارٍ رفع الصورة...</span>
                 </>
               ) : (
@@ -208,13 +221,15 @@ export default function CourseModal({
               onChange={handleFileUpload}
             />
             {uploadError && (
-              <span className="text-xs text-red-500 font-semibold">{uploadError}</span>
+              <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 600 }}>
+                {uploadError}
+              </span>
             )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
+        <div className={styles.actions}>
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             إلغاء
           </Button>
