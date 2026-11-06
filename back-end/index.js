@@ -24,6 +24,7 @@ const enrollmentRoutes = require("./routes/enrollment.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const reviewRoutes = require("./routes/review.routes");
 const certificateRoutes = require("./routes/certificate.routes");
+const quizRoutes = require("./routes/quiz.routes");
 
 app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
@@ -31,6 +32,7 @@ app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/certificates", certificateRoutes);
+app.use("/api/quizzes", quizRoutes);
 
 const url = process.env.MONGO_URL;
 

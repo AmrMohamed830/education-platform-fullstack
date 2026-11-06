@@ -70,6 +70,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/verify-certificate" className="text-slate-400 hover:text-white transition-colors">
+                  التحقق من الشهادات
+                </Link>
+              </li>
+              <li>
                 <a href="#testimonials" className="text-slate-400 hover:text-white transition-colors">
                   قصص النجاح
                 </a>

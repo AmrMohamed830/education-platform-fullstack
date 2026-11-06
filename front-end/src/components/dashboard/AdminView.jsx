@@ -12,6 +12,7 @@ import {
 import Button from '../common/Button';
 import CourseModal from './CourseModal';
 import CurriculumBuilder from './CurriculumBuilder';
+import QuizBuilder from './QuizBuilder';
 import {
   BookOpen,
   Users,
@@ -24,6 +25,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  HelpCircle,
 } from 'lucide-react';
 
 const { stats: mockStats, recentStudents: mockStudents } = adminDashboardData;
@@ -58,6 +60,7 @@ export default function AdminView({ activeTab = 'overview' }) {
   const [editingCourse, setEditingCourse] = useState(null);
   const [modalError, setModalError] = useState('');
   const [selectedCurriculumCourse, setSelectedCurriculumCourse] = useState(null);
+  const [selectedQuizCourse, setSelectedQuizCourse] = useState(null);
 
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
 
@@ -135,6 +138,18 @@ export default function AdminView({ activeTab = 'overview' }) {
         course={selectedCurriculumCourse}
         onBack={() => {
           setSelectedCurriculumCourse(null);
+        }}
+      />
+    );
+  }
+
+  // ── Render Quiz Builder if course is selected ───────────────────────
+  if (selectedQuizCourse) {
+    return (
+      <QuizBuilder
+        course={selectedQuizCourse}
+        onBack={() => {
+          setSelectedQuizCourse(null);
         }}
       />
     );
@@ -326,6 +341,15 @@ export default function AdminView({ activeTab = 'overview' }) {
                           >
                             <BookOpen size={15} />
                             <span>المنهج ({course.sections?.length || 0})</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 hover:bg-amber-600 hover:text-white transition cursor-pointer"
+                            onClick={() => setSelectedQuizCourse(course)}
+                            title="إدارة اختبار الكورس"
+                          >
+                            <HelpCircle size={15} />
+                            <span>الاختبار</span>
                           </button>
                           <button
                             type="button"

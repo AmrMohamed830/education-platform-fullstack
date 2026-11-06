@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { getCourseCertificate, getMyCertificates } from '../../services/certificate.service';
+import {
+  getCourseCertificate,
+  getMyCertificates,
+  verifyCertificate,
+} from '../../services/certificate.service';
 import { QUERY_KEYS } from '../../constants/query-keys';
 
 /**
@@ -27,6 +31,20 @@ export function useMyCertificates(enabled = true) {
       return response.data.data.certificates || [];
     },
     enabled,
+  });
+}
+
+/**
+ * Hook to verify a certificate by its unique code
+ */
+export function useVerifyCertificate(code, enabled = false) {
+  return useQuery({
+    queryKey: QUERY_KEYS.certificates.verify(code),
+    queryFn: async () => {
+      const response = await verifyCertificate(code);
+      return response.data.data.certificate;
+    },
+    enabled: Boolean(code && enabled),
   });
 }
 

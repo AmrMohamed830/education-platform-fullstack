@@ -33,5 +33,11 @@ export const QUERY_KEYS = {
     my: ['certificates', 'my'],
     verify: (code) => ['certificates', 'verify', code],
   },
+  quizzes: {
+    all: ['quizzes'],
+    byCourse: (courseId) => ['quizzes', 'course', courseId],
+    myAttempts: ['quizzes', 'my-attempts'],
+    courseAttempts: (courseId) => ['quizzes', 'course-attempts', courseId],
+  },
 };
 

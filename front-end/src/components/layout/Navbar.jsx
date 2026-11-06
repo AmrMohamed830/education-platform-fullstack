@@ -10,9 +10,9 @@ import useAuthStore from '../../store/auth.store';
 
 const NAV_LINKS = [
   { label: 'الرئيسية', href: '/' },
-  { label: 'لماذا نحن؟', href: '/#features' },
-  { label: 'المجالات', href: '/#categories' },
   { label: 'الكورسات', href: '/courses' },
+  { label: 'التحقق من الشهادات', href: '/verify-certificate' },
+  { label: 'لماذا نحن؟', href: '/#features' },
   { label: 'آراء الطلاب', href: '/#testimonials' },
 ];
 

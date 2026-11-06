@@ -23,6 +23,8 @@ import {
   Menu,
   X,
   Award,
+  HelpCircle,
+  ChevronLeft,
   Sparkles,
   Link as LinkIcon,
   AlertCircle,
@@ -490,6 +492,25 @@ export default function CoursePlayerContent({ courseId }) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Final Quiz Item in Sidebar */}
+          <div className="p-4 bg-slate-950 border-t border-slate-800 sticky bottom-0 z-10">
+            <Link
+              href={`/courses/${courseId}/quiz`}
+              className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-indigo-950 to-purple-950 border border-indigo-700/60 hover:border-indigo-500 transition-all text-white no-underline group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <HelpCircle size={18} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold block text-indigo-300">التقييم والشهادة</span>
+                  <span className="text-xs font-extrabold text-white">الاختبار النهائي للدورة</span>
+                </div>
+              </div>
+              <ChevronLeft size={16} className="text-indigo-400 group-hover:-translate-x-1 transition-transform" />
+            </Link>
           </div>
         </aside>
       </div>

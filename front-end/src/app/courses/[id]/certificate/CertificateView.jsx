@@ -9,6 +9,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Loader2,
+  HelpCircle,
+  Download,
 } from 'lucide-react';
 import { useCourseCertificate } from '@/hooks/queries/useCertificates';
 
@@ -59,13 +61,22 @@ export default function CertificateView({ courseId }) {
           <Award size={48} className="text-slate-400 mx-auto mb-4" />
           <h2 className="text-xl font-extrabold text-slate-900 mb-2">الشهادة غير متاحة حالياً</h2>
           <p className="text-sm text-slate-500 leading-relaxed mb-6">{error}</p>
-          <Link
-            href={`/courses/${courseId}/learn`}
-            className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[var(--primary)] text-white text-sm font-bold shadow-sm hover:opacity-95 transition-all no-underline"
-          >
-            <ArrowRight size={16} />
-            <span>العودة لإكمال الدروس</span>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href={`/courses/${courseId}/quiz`}
+              className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[var(--primary)] text-white text-sm font-bold shadow-sm hover:opacity-95 transition-all no-underline"
+            >
+              <HelpCircle size={16} />
+              <span>خوض الاختبار النهائي</span>
+            </Link>
+            <Link
+              href={`/courses/${courseId}/learn`}
+              className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all no-underline"
+            >
+              <ArrowRight size={16} />
+              <span>إكمال الدروس</span>
+            </Link>
+          </div>
         </div>
       </div>
     );

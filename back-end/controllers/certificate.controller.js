@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const Certificate = require("../models/certificate.model");
 const Course = require("../models/course.model");
 const Enrollment = require("../models/enrollment.model");
+const Quiz = require("../models/quiz.model");
+const QuizAttempt = require("../models/quizAttempt.model");
 const userRoles = require("../utils/userRoles");
 
 // Generate unique code
@@ -67,6 +69,25 @@ const getCourseCertificate = async (req, res) => {
             (completedCount / totalLessons) * 100
           )}%`,
         });
+      }
+
+      // Check if course has an active quiz and if student passed it
+      const quiz = await Quiz.findOne({ course: courseId, isActive: true });
+      if (quiz && quiz.questions && quiz.questions.length > 0) {
+        const passedAttempt = await QuizAttempt.findOne({
+          user: userId,
+          quiz: quiz._id,
+          passed: true,
+        });
+
+        if (!passedAttempt) {
+          return res.status(400).json({
+            status: "fail",
+            message: "يجب اجتياز الاختبار النهائي للدورة بنجاح للحصول على الشهادة المعتمدة.",
+            requiresQuiz: true,
+            quizId: quiz._id,
+          });
+        }
       }
     }
 

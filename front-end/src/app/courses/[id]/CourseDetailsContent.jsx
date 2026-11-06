@@ -479,6 +479,11 @@ export default function CourseDetailsContent({ courseId }) {
                           ابدأ التعلم ومتابعة الدروس 🎬
                         </Button>
                       </Link>
+                      <Link href={`/courses/${courseId}/quiz`} className="no-underline">
+                        <Button variant="outline" size="md" fullWidth icon={HelpCircle}>
+                          الاختبار النهائي للدورة 📝
+                        </Button>
+                      </Link>
                     </>
                   ) : !user ? (
                     <Link href="/login" className="no-underline">
@@ -515,6 +520,10 @@ export default function CourseDetailsContent({ courseId }) {
                   <div className="flex items-center gap-2.5">
                     <Award size={18} className="text-[var(--primary)] shrink-0" />
                     <span>شهادة إتمام معتمدة لملفك الشخصي</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <HelpCircle size={18} className="text-[var(--primary)] shrink-0" />
+                    <span>اختبار تقييمي شامل لقياس استيعابك للمهارات</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <PlayCircle size={18} className="text-[var(--primary)] shrink-0" />

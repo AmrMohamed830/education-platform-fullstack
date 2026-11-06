@@ -13,6 +13,7 @@ import {
   LogOut,
   X,
   ShieldAlert,
+  HelpCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import useAuthStore from '@/store/auth.store';
@@ -43,8 +44,9 @@ export default function Sidebar({
   const studentNav = [
     { id: 'overview', label: 'لوحة التحكم', icon: LayoutDashboard },
     { id: 'my-courses', label: 'كورساتي', icon: GraduationCap },
+    { id: 'quizzes', label: 'اختباراتي وسجل الدرجات', icon: HelpCircle },
+    { id: 'certificates', label: 'شهاداتي المعتمدة', icon: Award },
     { id: 'explore', label: 'استكشاف الكورسات', icon: Compass },
-    { id: 'certificates', label: 'الشهادات', icon: Award },
     { id: 'settings', label: 'الإعدادات', icon: Settings },
   ];
 
