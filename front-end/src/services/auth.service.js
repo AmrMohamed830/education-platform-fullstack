@@ -11,8 +11,16 @@ const getCurrentUser = () => {
     return api.get("/auth/me");
 };
 
-const logout =()=>{
-    return api.post("/auth/logout")
-}
+const logout = () => {
+  return api.post("/auth/logout");
+};
 
-export { registerUser, loginUser,getCurrentUser,logout  };
+const updateProfile = (data) => {
+  return api.patch("/auth/profile", data);
+};
+
+const changePassword = (data) => {
+  return api.patch("/auth/change-password", data);
+};
+
+export { registerUser, loginUser, getCurrentUser, logout, updateProfile, changePassword };

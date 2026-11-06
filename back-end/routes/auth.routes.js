@@ -6,6 +6,8 @@ const {
   login,
   getCurrentUser,
   logout,
+  updateProfile,
+  changePassword,
 } = require("../controllers/auth.controller");
 const {
   registerValidation,
@@ -19,6 +21,10 @@ router.route("/register").post(registerValidation, validateMiddleware, register)
 router.route("/login").post(loginValidation, validateMiddleware, login);
 
 router.route("/me").get(verifyToken, getCurrentUser);
+
+router.route("/profile").patch(verifyToken, updateProfile);
+
+router.route("/change-password").patch(verifyToken, changePassword);
 
 router.route("/logout").post(logout);
 

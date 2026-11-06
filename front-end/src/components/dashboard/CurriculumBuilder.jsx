@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getCourseCurriculum,
   addSection,
@@ -34,7 +34,9 @@ import {
   Loader2,
   Link as LinkIcon,
   X,
+  Upload,
 } from 'lucide-react';
+import { uploadResourceFile } from '@/services/upload.service';
 import styles from './CurriculumBuilder.module.css';
 
 export default function CurriculumBuilder({ course, onBack }) {
@@ -65,6 +67,25 @@ export default function CurriculumBuilder({ course, onBack }) {
     resources: [],
   });
   const [newResource, setNewResource] = useState({ title: '', url: '' });
+  const [uploadingResource, setUploadingResource] = useState(false);
+  const resourceFileInputRef = useRef(null);
+
+  const handleResourceFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingResource(true);
+      const res = await uploadResourceFile(file);
+      setNewResource({
+        title: res.data.data.title || file.name,
+        url: res.data.data.url,
+      });
+    } catch (err) {
+      alert(err?.response?.data?.message || 'فشل رفع الملف.');
+    } finally {
+      setUploadingResource(false);
+    }
+  };
 
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id, parentId, title }
 
@@ -704,6 +725,46 @@ export default function CurriculumBuilder({ course, onBack }) {
               <Button type="button" variant="outline" size="sm" onClick={handleAddResource}>
                 إضافة
               </Button>
+            </div>
+
+            <div style={{ margin: '0.4rem 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => resourceFileInputRef.current?.click()}
+                disabled={uploadingResource}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '0.375rem',
+                  border: '1px dashed #CBD5E1',
+                  background: '#F8FAFC',
+                  color: '#475569',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {uploadingResource ? (
+                  <>
+                    <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span>جارٍ رفع الملف...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={13} />
+                    <span>رفع ملف PDF أو مستند من جهازك</span>
+                  </>
+                )}
+              </button>
+              <input
+                ref={resourceFileInputRef}
+                type="file"
+                accept=".pdf,.zip,.rar,.docx,.doc,.pptx,.txt"
+                style={{ display: 'none' }}
+                onChange={handleResourceFileUpload}
+              />
             </div>
 
             {lessonFormData.resources.map((res, i) => (

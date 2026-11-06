@@ -130,6 +130,19 @@ const courseSchema = new mongoose.Schema(
       type: [sectionSchema],
       default: [],
     },
+
+    averageRating: {
+      type: Number,
+      default: 5.0,
+      min: 0,
+      max: 5,
+    },
+
+    ratingsCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

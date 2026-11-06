@@ -13,7 +13,7 @@ const NAV_LINKS = [
   { label: "الرئيسية", href: "/" },
   { label: "لماذا نحن؟", href: "/#features" },
   { label: "المجالات", href: "/#categories" },
-  { label: "الكورسات", href: "/#courses" },
+  { label: "الكورسات", href: "/courses" },
   { label: "آراء الطلاب", href: "/#testimonials" },
 ];
 

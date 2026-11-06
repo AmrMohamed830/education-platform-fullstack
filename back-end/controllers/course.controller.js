@@ -2,13 +2,79 @@ const Course = require("../models/course.model");
 const mongoose = require("mongoose");
 
 const getAllCourses = async (req, res) => {
-  const courses = await Course.find();
-  res.status(200).json({
-    status: "success",
-    data: {
-      courses,
-    },
-  });
+  try {
+    const { search, category, priceType, sort, page, limit } = req.query;
+
+    const filter = {};
+
+    // Search by title or description
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), "i");
+      filter.$or = [{ title: searchRegex }, { description: searchRegex }];
+    }
+
+    // Category filter
+    if (category && category !== "all" && category !== "الكل") {
+      filter.category = category;
+    }
+
+    // Price filter
+    if (priceType === "free") {
+      filter.price = 0;
+    } else if (priceType === "paid") {
+      filter.price = { $gt: 0 };
+    }
+
+    // Sorting
+    let sortOptions = { createdAt: -1 };
+    if (sort === "rating") {
+      sortOptions = { averageRating: -1, createdAt: -1 };
+    } else if (sort === "price-low") {
+      sortOptions = { price: 1, createdAt: -1 };
+    } else if (sort === "price-high") {
+      sortOptions = { price: -1, createdAt: -1 };
+    } else if (sort === "oldest") {
+      sortOptions = { createdAt: 1 };
+    }
+
+    // Total count for filters
+    const totalCourses = await Course.countDocuments(filter);
+
+    let query = Course.find(filter).sort(sortOptions);
+
+    let currentPage = 1;
+    let totalPages = 1;
+
+    // Optional pagination
+    if (page || limit) {
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.max(1, parseInt(limit) || 9);
+      currentPage = pageNum;
+      totalPages = Math.ceil(totalCourses / limitNum) || 1;
+      query = query.skip((pageNum - 1) * limitNum).limit(limitNum);
+    }
+
+    const courses = await query.exec();
+
+    // Get all distinct categories for filtering
+    const categories = await Course.distinct("category");
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        courses,
+        totalCourses,
+        totalPages,
+        currentPage,
+        categories: categories.filter(Boolean),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message || "حدث خطأ أثناء جلب الكورسات",
+    });
+  }
 };
 
 const getCourse = async (req, res) => {

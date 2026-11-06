@@ -399,14 +399,27 @@ export default function StudentView() {
                         {course.completedCount || 0} من {course.totalLessons || 0} درس مكتمل
                       </span>
 
-                      <Link
-                        href={`/courses/${course._id}/learn`}
-                        style={{ textDecoration: 'none' }}
-                      >
-                        <Button variant="primary" size="sm" icon={PlayCircle}>
-                          متابعة التعلم
-                        </Button>
-                      </Link>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        {course.progress === 100 && (
+                          <Link
+                            href={`/courses/${course._id}/certificate`}
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <Button variant="ghost" size="sm" icon={Award} style={{ color: '#D97706', borderColor: '#FDE68A' }}>
+                              الشهادة
+                            </Button>
+                          </Link>
+                        )}
+
+                        <Link
+                          href={`/courses/${course._id}/learn`}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Button variant="primary" size="sm" icon={PlayCircle}>
+                            {course.progress === 100 ? 'مراجعة الدروس' : 'متابعة التعلم'}
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
 
                   </div>

@@ -1,7 +1,7 @@
 import api from "../lib/axios";
 
-const getAllCourses = () => {
-  return api.get("/courses");
+const getAllCourses = (params = {}) => {
+  return api.get("/courses", { params });
 };
 
 const getCourse = (courseId) => {

@@ -9,6 +9,7 @@ import { enrollInCourse, getMyEnrollments } from '@/services/enrollment.service'
 import useAuthStore from '@/store/auth.store';
 import Container from '@/components/common/Container';
 import Button from '@/components/common/Button';
+import CourseReviews from '@/components/course/CourseReviews';
 import {
   BookOpen,
   CheckCircle2,
@@ -285,8 +286,10 @@ export default function CourseDetailsContent({ courseId }) {
 
               {/* Rating */}
               <div className={styles.ratingBadge}>
-                <span>⭐ 4.9</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>(+320 تقييم)</span>
+                <span>⭐ {(course.averageRating || 5.0).toFixed(1)}</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>
+                  ({course.ratingsCount || 0} تقييم)
+                </span>
               </div>
 
               {/* Certificate */}
@@ -464,6 +467,9 @@ export default function CourseDetailsContent({ courseId }) {
                 </div>
               </div>
             </div>
+
+            {/* Section 6: Course Reviews */}
+            <CourseReviews courseId={courseId} isEnrolled={isEnrolled} />
           </div>
 
           {/* Right / Sticky Sidebar */}

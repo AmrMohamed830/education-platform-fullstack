@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Modal from '../common/Modal';
 import Input from '../common/Input';
 import Button from '../common/Button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Upload, Loader2 } from 'lucide-react';
+import { uploadCourseImage } from '../../services/upload.service';
 import styles from './CourseModal.module.css';
 
 const EMPTY_FORM = {
@@ -39,6 +40,25 @@ export default function CourseModal({
     }
     return EMPTY_FORM;
   });
+
+  const fileInputRef = useRef(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingImage(true);
+      setUploadError('');
+      const res = await uploadCourseImage(file);
+      setFormData((prev) => ({ ...prev, image: res.data.data.url }));
+    } catch (err) {
+      setUploadError(err?.response?.data?.message || 'فشل رفع صورة الكورس');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -153,14 +173,60 @@ export default function CourseModal({
           </div>
         </div>
 
-        {/* Image URL */}
-        <Input
-          label="رابط صورة الكورس (اختياري)"
-          name="image"
-          value={formData.image}
-          onChange={handleChange}
-          placeholder="https://example.com/course-image.jpg"
-        />
+        {/* Image URL & File Upload */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <Input
+            label="رابط صورة الكورس (أو ارفع ملف من جهازك)"
+            name="image"
+            value={formData.image}
+            onChange={handleChange}
+            placeholder="https://example.com/course-image.jpg"
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '0.5rem',
+                border: '1.5px dashed #CBD5E1',
+                backgroundColor: '#F8FAFC',
+                color: '#475569',
+                fontSize: '0.825rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {uploadingImage ? (
+                <>
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>جارٍ رفع الصورة...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={14} />
+                  <span>رفع صورة من الجهاز</span>
+                </>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+            {uploadError && (
+              <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 600 }}>
+                {uploadError}
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* Actions */}
         <div className={styles.actions}>

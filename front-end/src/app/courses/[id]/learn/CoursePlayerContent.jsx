@@ -23,6 +23,7 @@ import {
   Clock,
   Menu,
   X,
+  Award,
   Layers,
   Sparkles,
   Link as LinkIcon,
@@ -302,6 +303,31 @@ export default function CoursePlayerContent({ courseId }) {
               </div>
               <span className={styles.progressText}>{progressPercentage}% مكتمل</span>
             </div>
+          )}
+
+          {progressPercentage === 100 && (
+            <Link href={`/courses/${courseId}/certificate`} style={{ textDecoration: 'none' }}>
+              <button
+                type="button"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.45rem 0.9rem',
+                  backgroundColor: '#D97706',
+                  color: '#FFFFFF',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(217, 119, 6, 0.3)',
+                }}
+              >
+                <Award size={16} />
+                <span>شهادتك 🎓</span>
+              </button>
+            </Link>
           )}
 
           <button
