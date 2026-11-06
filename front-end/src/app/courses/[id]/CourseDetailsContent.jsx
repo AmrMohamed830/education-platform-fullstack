@@ -536,6 +536,13 @@ export default function CourseDetailsContent({ courseId }) {
                           ابدأ التعلم ومتابعة الدروس 🎬
                         </Button>
                       </Link>
+                      <div style={{ marginTop: '0.65rem' }}>
+                        <Link href={`/courses/${courseId}/quiz`} style={{ textDecoration: 'none' }}>
+                          <Button variant="outline" size="md" fullWidth icon={HelpCircle}>
+                            اختبار الكورس النهائي 📝
+                          </Button>
+                        </Link>
+                      </div>
                     </>
                   ) : !user ? (
                     <Link href="/login" style={{ textDecoration: 'none' }}>

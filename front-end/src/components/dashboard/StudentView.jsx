@@ -14,6 +14,7 @@ import {
   Users,
   BookMarked,
   PlayCircle,
+  HelpCircle,
 } from "lucide-react";
 
 import Button from "../common/Button";
@@ -402,6 +403,15 @@ export default function StudentView({ activeTab = "overview" }) {
                       </span>
 
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <Link
+                          href={`/courses/${course._id}/quiz`}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Button variant="outline" size="sm" icon={HelpCircle}>
+                            الاختبار
+                          </Button>
+                        </Link>
+
                         {course.progress === 100 && (
                           <Link
                             href={`/courses/${course._id}/certificate`}

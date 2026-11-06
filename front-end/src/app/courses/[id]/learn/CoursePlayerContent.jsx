@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   Award,
+  HelpCircle,
   Layers,
   Sparkles,
   Link as LinkIcon,
@@ -304,6 +305,29 @@ export default function CoursePlayerContent({ courseId }) {
               <span className={styles.progressText}>{progressPercentage}% مكتمل</span>
             </div>
           )}
+
+          <Link href={`/courses/${courseId}/quiz`} style={{ textDecoration: 'none' }}>
+            <button
+              type="button"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem 0.9rem',
+                backgroundColor: '#4F46E5',
+                color: '#FFFFFF',
+                borderRadius: '0.5rem',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
+              }}
+            >
+              <HelpCircle size={16} />
+              <span>اختبار الكورس 📝</span>
+            </button>
+          </Link>
 
           {progressPercentage === 100 && (
             <Link href={`/courses/${courseId}/certificate`} style={{ textDecoration: 'none' }}>

@@ -7,6 +7,7 @@ import { getAdminStatsAndStudents } from '@/services/auth.service';
 import Button from '../common/Button';
 import CourseModal from './CourseModal';
 import CurriculumBuilder from './CurriculumBuilder';
+import QuizBuilder from './QuizBuilder';
 import {
   BookOpen,
   Users,
@@ -20,6 +21,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  HelpCircle,
 } from 'lucide-react';
 import styles from './AdminView.module.css';
 
@@ -46,6 +48,7 @@ export default function AdminView({ activeTab = 'overview' }) {
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState('');
   const [selectedCurriculumCourse, setSelectedCurriculumCourse] = useState(null);
+  const [selectedQuizCourse, setSelectedQuizCourse] = useState(null);
 
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
 
@@ -169,6 +172,19 @@ export default function AdminView({ activeTab = 'overview' }) {
         course={selectedCurriculumCourse}
         onBack={() => {
           setSelectedCurriculumCourse(null);
+          fetchDashboardData();
+        }}
+      />
+    );
+  }
+
+  // ── Render Quiz Builder if course is selected ──────────────────────
+  if (selectedQuizCourse) {
+    return (
+      <QuizBuilder
+        course={selectedQuizCourse}
+        onBack={() => {
+          setSelectedQuizCourse(null);
           fetchDashboardData();
         }}
       />
@@ -351,6 +367,27 @@ export default function AdminView({ activeTab = 'overview' }) {
                         >
                           <BookOpen size={15} />
                           <span>المنهج ({course.sections?.length || 0})</span>
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '8px',
+                            backgroundColor: '#FEF3C7',
+                            color: '#B45309',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            border: '1px solid #FDE68A',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setSelectedQuizCourse(course)}
+                          title="إدارة اختبار الكورس"
+                        >
+                          <HelpCircle size={15} />
+                          <span>الاختبار</span>
                         </button>
                         <button
                           className={styles.editBtn}
