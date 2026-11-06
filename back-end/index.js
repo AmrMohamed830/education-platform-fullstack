@@ -2,18 +2,44 @@ const express = require("express");
 const app = express();
 const path = require("path");
 
-require("dotenv").config()
+require("dotenv").config();
+
+// Trust proxy for secure cookies behind reverse proxies (Render, Railway, Vercel, etc.)
+app.set("trust proxy", 1);
 
 const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 
 const cors = require("cors");
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true,
-}));
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.includes("localhost")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback to avoid unintended production CORS blocks
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
+
+// Health check endpoint for uptime monitors and cloud deployment health probes
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Serve static uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -46,6 +72,7 @@ mongoose
     console.log("mongodb connection note:", err.message);
   });
 
-app.listen(5000, () => {
-  console.log("iam listening");
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });

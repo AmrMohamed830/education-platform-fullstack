@@ -2,6 +2,17 @@ const User = require("../models/auth.model");
 const bcrypt = require("bcrypt");
 const generateJwt = require("../utils/generateJWT");
 
+const getAuthCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/",
+  };
+};
+
 const register = async (req, res) => {
   const { name, email, password, avatar } = req.body;
 
@@ -29,13 +40,7 @@ const register = async (req, res) => {
   
   await newUser.save();
 
-  res.cookie("token", token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: "/",
-});
+  res.cookie("token", token, getAuthCookieOptions());
 
 
   const { password: userPassword, token: userToken, ...userData } = newUser.toObject();
@@ -61,13 +66,7 @@ const login = async (req, res) => {
         id: findUserByEmail._id,
       });
         
-  res.cookie("token", token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: "/",
-});
+      res.cookie("token", token, getAuthCookieOptions());
 
       const { password: userPassword, token: userToken, ...userData } = findUserByEmail.toObject();
 
@@ -252,10 +251,11 @@ const getAdminStatsAndStudents = async (req, res) => {
 };
 
 const logout = (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
   res.clearCookie("token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     path: "/",
   });
 
