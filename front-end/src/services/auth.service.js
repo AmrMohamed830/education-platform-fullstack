@@ -23,4 +23,16 @@ const changePassword = (data) => {
   return api.patch("/auth/change-password", data);
 };
 
-export { registerUser, loginUser, getCurrentUser, logout, updateProfile, changePassword };
+const getAdminStatsAndStudents = () => {
+  return api.get("/auth/admin/stats");
+};
+
+export {
+  registerUser,
+  loginUser,
+  getCurrentUser,
+  logout,
+  updateProfile,
+  changePassword,
+  getAdminStatsAndStudents,
+};

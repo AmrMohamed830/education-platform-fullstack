@@ -194,6 +194,63 @@ const changePassword = async (req, res) => {
   }
 };
 
+const getAdminStatsAndStudents = async (req, res) => {
+  try {
+    const Course = require("../models/course.model");
+    const Enrollment = require("../models/enrollment.model");
+    const Review = require("../models/review.model");
+    const userRoles = require("../utils/userRoles");
+
+    // Fetch real students
+    const students = await User.find({ role: userRoles.USER })
+      .select("-password -token")
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    // Get total counts
+    const totalCourses = await Course.countDocuments();
+    const totalStudents = await User.countDocuments({ role: userRoles.USER });
+    const totalEnrollments = await Enrollment.countDocuments();
+    const totalReviews = await Review.countDocuments();
+
+    // Map each student with their enrolled courses
+    const studentListWithEnrollments = await Promise.all(
+      students.map(async (st) => {
+        const enrollments = await Enrollment.find({ user: st._id })
+          .populate("course", "title")
+          .limit(2);
+        const courseNames = enrollments.map((e) => e.course?.title || "كورس").join("، ");
+        return {
+          id: st._id,
+          name: st.name,
+          email: st.email,
+          avatar: st.avatar,
+          course: courseNames || "لم يسجل بعد",
+          date: new Date(st.createdAt).toLocaleDateString("ar-EG"),
+        };
+      })
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        stats: {
+          totalCourses,
+          totalStudents,
+          totalEnrollments,
+          totalReviews,
+        },
+        students: studentListWithEnrollments,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message || "حدث خطأ أثناء جلب إحصائيات لوحة الإدارة",
+    });
+  }
+};
+
 const logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
@@ -215,4 +272,5 @@ module.exports = {
   logout,
   updateProfile,
   changePassword,
+  getAdminStatsAndStudents,
 };

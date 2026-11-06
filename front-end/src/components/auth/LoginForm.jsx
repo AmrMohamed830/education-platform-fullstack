@@ -150,13 +150,18 @@ export default function LoginForm() {
           disabled={isLoading}
         />
 
-        <a
-          href="#"
+        <button
+          type="button"
           className={styles.forgotLink}
-          onClick={(e) => e.preventDefault()}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+          onClick={() =>
+            alert(
+              'لاستعادة أو إعادة تعيين كلمة المرور، يرجى التواصل مع إدارة المنصة عبر البريد: support@platform.com'
+            )
+          }
         >
           هل نسيت كلمة المرور؟
-        </a>
+        </button>
       </div>
 
       {/* Submit Button */}

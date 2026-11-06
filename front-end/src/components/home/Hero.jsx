@@ -38,11 +38,11 @@ export default function Hero() {
                   ابدأ التعلم الآن
                 </Button>
               </Link>
-              <a href="#categories" style={{ textDecoration: 'none' }}>
+              <Link href="/courses" style={{ textDecoration: 'none' }}>
                 <Button variant="outline" size="lg" icon={PlayCircle} iconPosition="start">
                   استكشف المسارات
                 </Button>
-              </a>
+              </Link>
             </div>
 
             {/* Highlights List */}

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Container from '../common/Container';
 import SectionHeader from '../common/SectionHeader';
 import { categoriesData } from '@/data/categories';
@@ -31,34 +32,40 @@ export default function CourseCategories() {
           {categoriesData.map((category) => {
             const IconComponent = ICON_MAP[category.icon] || Code2;
             return (
-              <div key={category.id} className={styles.categoryCard}>
-                <div
-                  className={styles.iconBox}
-                  style={{ '--cat-color': category.color }}
-                >
-                  <IconComponent size={28} />
-                </div>
+              <Link
+                key={category.id}
+                href="/courses"
+                style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
+              >
+                <div className={styles.categoryCard}>
+                  <div
+                    className={styles.iconBox}
+                    style={{ '--cat-color': category.color }}
+                  >
+                    <IconComponent size={28} />
+                  </div>
 
-                <div className={styles.cardContent}>
-                  <h3 className={styles.title}>{category.title}</h3>
-                  <p className={styles.desc}>{category.description}</p>
-                  
-                  <div className={styles.footerInfo}>
-                    <div className={styles.infoBadge}>
-                      <BookOpen size={14} />
-                      <span>{category.courseCount} دورة</span>
-                    </div>
-                    <div className={styles.infoBadge}>
-                      <Users size={14} />
-                      <span>{category.studentCount} طالب</span>
+                  <div className={styles.cardContent}>
+                    <h3 className={styles.title}>{category.title}</h3>
+                    <p className={styles.desc}>{category.description}</p>
+                    
+                    <div className={styles.footerInfo}>
+                      <div className={styles.infoBadge}>
+                        <BookOpen size={14} />
+                        <span>{category.courseCount} دورة</span>
+                      </div>
+                      <div className={styles.infoBadge}>
+                        <Users size={14} />
+                        <span>{category.studentCount} طالب</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className={styles.arrowBox}>
-                  <ArrowLeft size={18} />
+                  <div className={styles.arrowBox}>
+                    <ArrowLeft size={18} />
+                  </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -153,9 +153,11 @@ export default function Courses() {
             </div>
 
             <div className={styles.viewMoreRow}>
-              <Button variant="outline" size="lg" icon={ArrowLeft}>
-                عرض كافة الكورسات والمسارات ({courses.length}+)
-              </Button>
+              <Link href="/courses" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" size="lg" icon={ArrowLeft}>
+                  عرض كافة الكورسات والمسارات ({courses.length}+)
+                </Button>
+              </Link>
             </div>
           </>
         )}

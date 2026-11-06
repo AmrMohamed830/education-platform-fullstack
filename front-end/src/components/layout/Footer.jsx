@@ -1,23 +1,36 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
 import Container from '../common/Container';
 import Button from '../common/Button';
-import { BookOpen, Send, Mail, Phone, MapPin, Heart } from 'lucide-react';
+import { BookOpen, Send, Mail, Phone, MapPin, Heart, CheckCircle2 } from 'lucide-react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
+  const [subscribed, setSubscribed] = useState(false);
+  const [email, setEmail] = useState('');
+
+  const handleNewsletter = (e) => {
+    e.preventDefault();
+    if (email) {
+      setSubscribed(true);
+      setEmail('');
+    }
+  };
+
   return (
     <footer className={styles.footer}>
       <Container>
         <div className={styles.topGrid}>
           {/* Brand Info */}
           <div className={styles.brandCol}>
-            <a href="#" className={styles.logo}>
+            <Link href="/" className={styles.logo}>
               <div className={styles.logoIcon}>
                 <BookOpen size={24} color="#FFFFFF" />
               </div>
               <span className={styles.brandTitle}>مَنصّتِي</span>
-            </a>
+            </Link>
             <p className={styles.brandDesc}>
               المنصة التعليمية العربية المتقدمة لبناء مهارات المستقيل في مجالات البرمجة، الذكاء الاصطناعي والتصميم بخبرات عمليّة حقيقية.
             </p>
@@ -39,8 +52,8 @@ export default function Footer() {
             <ul className={styles.linkList}>
               <li><a href="#hero">الرئيسية</a></li>
               <li><a href="#features">لماذا نتميز؟</a></li>
-              <li><a href="#categories">المجالات التعليمية</a></li>
-              <li><a href="#courses">الكورسات المتاحة</a></li>
+              <li><Link href="/courses">المجالات التعليمية</Link></li>
+              <li><Link href="/courses">الكورسات المتاحة</Link></li>
               <li><a href="#testimonials">قصص النجاح</a></li>
             </ul>
           </div>
@@ -49,11 +62,11 @@ export default function Footer() {
           <div className={styles.linksCol}>
             <h4 className={styles.colTitle}>أبرز المسارات</h4>
             <ul className={styles.linkList}>
-              <li><a href="#categories">تطوير الويب الكامل</a></li>
-              <li><a href="#categories">الذكاء الاصطناعي</a></li>
-              <li><a href="#categories">تصميم الواجهات UX/UI</a></li>
-              <li><a href="#categories">تطوير الجوال</a></li>
-              <li><a href="#categories">الأمن السيبراني</a></li>
+              <li><Link href="/courses">تطوير الويب الكامل</Link></li>
+              <li><Link href="/courses">الذكاء الاصطناعي</Link></li>
+              <li><Link href="/courses">تصميم الواجهات UX/UI</Link></li>
+              <li><Link href="/courses">تطوير الجوال</Link></li>
+              <li><Link href="/courses">الأمن السيبراني</Link></li>
             </ul>
           </div>
 
@@ -63,17 +76,26 @@ export default function Footer() {
             <p className={styles.newsletterDesc}>
               اشترك للحصول على أحدث المقالات والمقاعد المجانية في الدورات الجديدة.
             </p>
-            <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
-              <input
-                type="email"
-                placeholder="أدخل بريدك الإلكتروني"
-                className={styles.newsletterInput}
-                required
-              />
-              <Button type="submit" variant="primary" size="sm" icon={Send} iconPosition="start">
-                اشترك
-              </Button>
-            </form>
+            {subscribed ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10B981', fontWeight: 700, fontSize: '0.9rem', padding: '0.5rem 0' }}>
+                <CheckCircle2 size={18} />
+                <span>تم الاشتراك في النشرة بنجاح! 💌</span>
+              </div>
+            ) : (
+              <form className={styles.newsletterForm} onSubmit={handleNewsletter}>
+                <input
+                  type="email"
+                  placeholder="أدخل بريدك الإلكتروني"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={styles.newsletterInput}
+                  required
+                />
+                <Button type="submit" variant="primary" size="sm" icon={Send} iconPosition="start">
+                  اشترك
+                </Button>
+              </form>
+            )}
           </div>
         </div>
 

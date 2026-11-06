@@ -3,13 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminDashboardData } from '@/data/dashboardData';
 import { getAllCourses, addCourse, updateCourse, deleteCourse } from '@/services/course.service';
+import { getAdminStatsAndStudents } from '@/services/auth.service';
 import Button from '../common/Button';
 import CourseModal from './CourseModal';
 import CurriculumBuilder from './CurriculumBuilder';
 import {
   BookOpen,
   Users,
-  DollarSign,
+  Award,
+  MessageSquare,
   GraduationCap,
   Plus,
   Edit3,
@@ -21,14 +23,20 @@ import {
 } from 'lucide-react';
 import styles from './AdminView.module.css';
 
-// Keep mock stats and students — real enrollment/payment systems are out of scope
-const { stats, recentStudents } = adminDashboardData;
+const { stats: mockStats, recentStudents: mockStudents } = adminDashboardData;
 
 // Map backend status value to Arabic display label
 const statusLabel = (status) => (status === 'active' ? 'نشط' : 'مسودة');
 
 export default function AdminView({ activeTab = 'overview' }) {
   const [courses, setCourses] = useState([]);
+  const [adminStats, setAdminStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    totalEnrollments: 0,
+    totalReviews: 0,
+  });
+  const [studentsList, setStudentsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
@@ -41,15 +49,28 @@ export default function AdminView({ activeTab = 'overview' }) {
 
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
 
-  // ── Fetch all courses from backend ──────────────────────────────────
-  const fetchCourses = useCallback(async () => {
+  // ── Fetch all courses & stats from backend ──────────────────────────
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setFetchError('');
-      const response = await getAllCourses();
-      setCourses(response.data.data.courses);
+      const [coursesRes, statsRes] = await Promise.all([
+        getAllCourses(),
+        getAdminStatsAndStudents().catch(() => null),
+      ]);
+      setCourses(coursesRes.data.data.courses || []);
+      if (statsRes?.data?.data) {
+        setAdminStats(statsRes.data.data.stats);
+        if (statsRes.data.data.students?.length > 0) {
+          setStudentsList(statsRes.data.data.students);
+        } else {
+          setStudentsList(mockStudents);
+        }
+      } else {
+        setStudentsList(mockStudents);
+      }
     } catch {
-      setFetchError('تعذّر تحميل الكورسات. يرجى المحاولة مجدداً.');
+      setFetchError('تعذّر تحميل بيانات لوحة الإدارة. يرجى المحاولة مجدداً.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +81,7 @@ export default function AdminView({ activeTab = 'overview' }) {
 
     const init = async () => {
       if (!ignore) {
-        await fetchCourses();
+        await fetchDashboardData();
       }
     };
 
@@ -69,7 +90,7 @@ export default function AdminView({ activeTab = 'overview' }) {
     return () => {
       ignore = true;
     };
-  }, [fetchCourses]);
+  }, [fetchDashboardData]);
 
   // ── Alert helper ────────────────────────────────────────────────────
   const showAlert = (text, type = 'success') => {
@@ -110,7 +131,7 @@ export default function AdminView({ activeTab = 'overview' }) {
         showAlert('تمت إضافة الكورس الجديد بنجاح! 🎉');
       }
       handleCloseModal();
-      await fetchCourses();
+      await fetchDashboardData();
     } catch (err) {
       const msg = err?.response?.data?.message || 'حدث خطأ أثناء حفظ الكورس.';
       setModalError(msg);
@@ -126,7 +147,7 @@ export default function AdminView({ activeTab = 'overview' }) {
     try {
       await deleteCourse(courseId);
       showAlert('تم حذف الكورس بنجاح! 🗑️');
-      await fetchCourses();
+      await fetchDashboardData();
     } catch (err) {
       const msg = err?.response?.data?.message || 'حدث خطأ أثناء حذف الكورس.';
       showAlert(msg, 'error');
@@ -148,7 +169,7 @@ export default function AdminView({ activeTab = 'overview' }) {
         course={selectedCurriculumCourse}
         onBack={() => {
           setSelectedCurriculumCourse(null);
-          fetchCourses();
+          fetchDashboardData();
         }}
       />
     );
@@ -195,7 +216,7 @@ export default function AdminView({ activeTab = 'overview' }) {
                 <BookOpen size={20} />
               </div>
             </div>
-            <div className={styles.statVal}>{courses.length}</div>
+            <div className={styles.statVal}>{adminStats.totalCourses || courses.length}</div>
             <div className={styles.statSub}>كورسات في قاعدة البيانات</div>
           </div>
 
@@ -206,30 +227,32 @@ export default function AdminView({ activeTab = 'overview' }) {
                 <Users size={20} />
               </div>
             </div>
-            <div className={styles.statVal}>{stats.totalStudents.toLocaleString()}</div>
-            <div className={styles.statSub}>نمو بنسبة {stats.monthlyGrowth}</div>
+            <div className={styles.statVal}>
+              {(adminStats.totalStudents || mockStats.totalStudents).toLocaleString()}
+            </div>
+            <div className={styles.statSub}>طلاب مسجلون في المنصة</div>
           </div>
 
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <span className={styles.statLabel}>إجمالي الإيرادات</span>
+              <span className={styles.statLabel}>إجمالي الاشتراكات</span>
               <div className={styles.iconBox} style={{ background: '#FEF3C7', color: '#D97706' }}>
-                <DollarSign size={20} />
+                <Award size={20} />
               </div>
             </div>
-            <div className={styles.statVal}>{stats.totalRevenue}</div>
-            <div className={styles.statSub}>صافي أرباح الدورات</div>
+            <div className={styles.statVal}>{adminStats.totalEnrollments || 0}</div>
+            <div className={styles.statSub}>اشتراكات نشطة بالدورات</div>
           </div>
 
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <span className={styles.statLabel}>المدربون والخبراء</span>
+              <span className={styles.statLabel}>آراء ومراجعات الطلاب</span>
               <div className={styles.iconBox} style={{ background: '#F3E8FF', color: '#9333EA' }}>
-                <GraduationCap size={20} />
+                <MessageSquare size={20} />
               </div>
             </div>
-            <div className={styles.statVal}>{stats.totalInstructors}</div>
-            <div className={styles.statSub}>في مختلف التخصصات</div>
+            <div className={styles.statVal}>{adminStats.totalReviews || 0}</div>
+            <div className={styles.statSub}>تقييمات مسجلة للمناهج</div>
           </div>
         </div>
       )}
@@ -375,8 +398,8 @@ export default function AdminView({ activeTab = 'overview' }) {
                 </tr>
               </thead>
               <tbody>
-                {recentStudents.map((st) => (
-                  <tr key={st.id}>
+                {studentsList.map((st) => (
+                  <tr key={st.id || st.email}>
                     <td className={styles.studentNameCell}>{st.name}</td>
                     <td>{st.email}</td>
                     <td>
