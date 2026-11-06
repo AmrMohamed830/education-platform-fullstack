@@ -15,6 +15,7 @@ import {
   BookMarked,
   PlayCircle,
   HelpCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 import Button from "../common/Button";
@@ -291,7 +292,89 @@ export default function StudentView({ activeTab = "overview" }) {
         </div>
       )}
 
+      {/* Certificates Tab */}
+      {activeTab === "certificates" && (
+        <div style={{ background: '#FFFFFF', padding: '2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-light)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-light)', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Award size={24} color="#D97706" />
+                شهاداتي المعتمدة
+              </h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                الشهادات الرقمية الرسمية الصادرة باسمك لإتمام المسارات التعليمية بنجاح
+              </p>
+            </div>
+            <Link href="/verify-certificate">
+              <Button variant="outline" size="sm" icon={ShieldCheck}>
+                التحقق من كود شهادة
+              </Button>
+            </Link>
+          </div>
+
+          {enrolledCourses.filter((c) => c.progress === 100).length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', background: '#F8FAFC', borderRadius: 'var(--radius-lg)', border: '1.5px dashed var(--border-light)' }}>
+              <Award size={48} color="#CBD5E1" style={{ margin: '0 auto 1rem' }} />
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                لا توجد شهادات صادرة حتى الآن
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '460px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+                للحصول على شهادة معتمدة، أكمل جميع دروس الكورس بنسبة 100% واجتز الاختبار النهائي بنجاح.
+              </p>
+              <Link href="/courses">
+                <Button variant="primary" size="md">
+                  استكشاف الكورسات ومتابعة التعلم
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+              {enrolledCourses
+                .filter((c) => c.progress === 100)
+                .map((course) => (
+                  <div
+                    key={course._id}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1.5px solid #FDE68A',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                      boxShadow: '0 4px 15px rgba(217, 119, 6, 0.08)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706' }}>
+                        <Award size={20} />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706' }}>شهادة إتمام معتمدة</span>
+                        <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>{course.title}</h4>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      المدرب: <strong>{course.instructor || 'مَنصّتِي'}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                      <Link href={`/courses/${course._id}/certificate`} style={{ flex: 1, textDecoration: 'none' }}>
+                        <Button variant="primary" size="sm" fullWidth icon={Award}>
+                          عرض وطباعة الشهادة 📜
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Content */}
+      {activeTab !== "certificates" && (
       <section className={styles.mainGrid}>
 
         {/* Enrolled Courses */}
@@ -522,6 +605,7 @@ export default function StudentView({ activeTab = "overview" }) {
         </aside>
 
       </section>
+      )}
     </div>
   );
 }

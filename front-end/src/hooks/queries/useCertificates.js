@@ -37,7 +37,7 @@ export function useMyCertificates(enabled = true) {
 /**
  * Hook to verify a certificate by its unique code
  */
-export function useVerifyCertificate(code, enabled = false) {
+export function useVerifyCertificate(code, enabled = true) {
   return useQuery({
     queryKey: QUERY_KEYS.certificates.verify(code),
     queryFn: async () => {

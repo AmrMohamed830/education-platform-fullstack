@@ -30,7 +30,7 @@ export default function VerifyCertificateContent() {
 
   const { data: certResponse, isLoading, error } = useVerifyCertificate(activeCode);
 
-  const certData = certResponse?.certificate;
+  const certData = certResponse?.certificate || certResponse;
 
   const handleSearch = (e) => {
     e.preventDefault();

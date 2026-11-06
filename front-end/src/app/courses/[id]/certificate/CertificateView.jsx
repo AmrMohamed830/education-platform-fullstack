@@ -11,6 +11,7 @@ import {
   BookOpen,
   Loader2,
   CheckCircle2,
+  HelpCircle,
 } from 'lucide-react';
 import { getCourseCertificate } from '../../../../services/certificate.service';
 import styles from './Certificate.module.css';
@@ -19,6 +20,7 @@ export default function CertificateView({ courseId }) {
   const [certificate, setCertificate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [requiresQuiz, setRequiresQuiz] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -26,9 +28,13 @@ export default function CertificateView({ courseId }) {
       try {
         setLoading(true);
         setError('');
+        setRequiresQuiz(false);
         const res = await getCourseCertificate(courseId);
         setCertificate(res.data.data.certificate);
       } catch (err) {
+        if (err?.response?.data?.requiresQuiz) {
+          setRequiresQuiz(true);
+        }
         setError(
           err?.response?.data?.message ||
             'لم يتم العثور على شهادة لهذا الكورس، يرجى التأكد من إكمال جميع الدروس أولاً.'
@@ -99,7 +105,17 @@ export default function CertificateView({ courseId }) {
           <p style={{ color: '#64748B', lineHeight: 1.6, marginBottom: '2rem', fontSize: '0.95rem' }}>
             {error}
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {requiresQuiz && (
+              <Link
+                href={`/courses/${courseId}/quiz`}
+                className={`${styles.actionBtn} ${styles.primaryBtn}`}
+                style={{ backgroundColor: '#D97706' }}
+              >
+                <HelpCircle size={18} />
+                <span>خوض اختبار الكورس الآن 📝</span>
+              </Link>
+            )}
             <Link
               href={`/courses/${courseId}/learn`}
               className={`${styles.actionBtn} ${styles.primaryBtn}`}
