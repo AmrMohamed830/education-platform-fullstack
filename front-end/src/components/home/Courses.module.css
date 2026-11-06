@@ -104,8 +104,27 @@
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.4;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   min-height: 3.2rem;
+}
+
+.titleLink {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.titleLink:hover {
+  color: var(--primary);
+}
+
+.instructorRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #64748B;
+  margin-bottom: 0.85rem;
 }
 
 .instructorInfo {

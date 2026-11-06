@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Container from '../common/Container';
 import SectionHeader from '../common/SectionHeader';
 import Button from '../common/Button';
 import StarRating from '../common/StarRating';
 import { getAllCourses } from '@/services/course.service';
-import { BookOpen, Users, Clock, ArrowLeft, Bookmark, AlertCircle, Loader2 } from 'lucide-react';
+import { BookOpen, Users, Clock, ArrowLeft, Bookmark, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import styles from './Courses.module.css';
 
 // Gradient palette cycled for cards that have no image
@@ -82,12 +83,12 @@ export default function Courses() {
             <div className={styles.grid}>
               {courses.map((course, index) => {
                 const gradient = GRADIENTS[index % GRADIENTS.length];
-                const avatarChar = course.title?.charAt(0) ?? '؟';
 
                 return (
                   <div key={course._id} className={styles.courseCard}>
                     {/* Card Banner */}
-                    <div
+                    <Link
+                      href={`/courses/${course._id}`}
                       className={styles.imageBanner}
                       style={
                         course.image
@@ -100,33 +101,50 @@ export default function Courses() {
                       }
                     >
                       <div className={styles.badgeRow}>
-                        <span className={styles.courseBadge}>كورس</span>
-                        <button className={styles.bookmarkBtn} aria-label="حفظ الكورس">
+                        <span className={styles.courseBadge}>
+                          {course.category || 'كورس'}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.bookmarkBtn}
+                          aria-label="حفظ الكورس"
+                          onClick={(e) => e.preventDefault()}
+                        >
                           <Bookmark size={16} />
                         </button>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Card Content */}
                     <div className={styles.cardContent}>
-                      <h3 className={styles.courseTitle}>{course.title}</h3>
+                      <Link href={`/courses/${course._id}`} className={styles.titleLink}>
+                        <h3 className={styles.courseTitle}>{course.title}</h3>
+                      </Link>
+
+                      {course.instructor && (
+                        <div className={styles.instructorRow}>
+                          <Users size={14} />
+                          <span>المدرب: {course.instructor}</span>
+                        </div>
+                      )}
 
                       {course.description && (
                         <p className={styles.courseDescription}>{course.description}</p>
                       )}
 
-                      {/* Card Footer */}
+                      {/* Card Footer with Price and Action Button */}
                       <div className={styles.cardFooter}>
-                        <div className={styles.metaGroup}>
-                          <div className={styles.metaItem}>
-                            <BookOpen size={14} />
-                            <span>كورس</span>
-                          </div>
+                        <div className={styles.priceGroup}>
+                          <span className={styles.price}>
+                            {course.price === 0 ? 'مجاناً' : `${course.price} $`}
+                          </span>
                         </div>
 
-                        <div className={styles.priceGroup}>
-                          <span className={styles.price}>{course.price} $</span>
-                        </div>
+                        <Link href={`/courses/${course._id}`} style={{ textDecoration: 'none' }}>
+                          <Button variant="outline" size="sm" icon={ArrowLeft}>
+                            تفاصيل واشتراك
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </div>
