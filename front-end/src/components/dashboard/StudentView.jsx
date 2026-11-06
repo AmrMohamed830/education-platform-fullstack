@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 import {
   BookOpen,
@@ -12,6 +13,7 @@ import {
   Calendar,
   Users,
   BookMarked,
+  PlayCircle,
 } from "lucide-react";
 
 import Button from "../common/Button";
@@ -93,7 +95,26 @@ export default function StudentView() {
     .map((enrollment) => ({
       ...enrollment.course,
       enrolledAt: enrollment.enrolledAt,
+      progress: enrollment.progress || 0,
+      totalLessons: enrollment.totalLessons || 0,
+      completedCount: enrollment.completedCount || 0,
     }));
+
+  const totalEnrolledLessons = enrolledCourses.reduce(
+    (acc, c) => acc + (c.totalLessons || 0),
+    0
+  );
+  const totalCompletedLessons = enrolledCourses.reduce(
+    (acc, c) => acc + (c.completedCount || 0),
+    0
+  );
+  const overallProgress =
+    totalEnrolledLessons > 0
+      ? Math.round((totalCompletedLessons / totalEnrolledLessons) * 100)
+      : 0;
+  const completedCoursesCount = enrolledCourses.filter(
+    (c) => c.progress === 100
+  ).length;
 
   // استخراج الكورسات المتاحة للاشتراك
   const enrolledCourseIds = new Set(
@@ -179,11 +200,11 @@ export default function StudentView() {
 
         <div className={styles.progressRingCard}>
           <div className={styles.percentText}>
-            {enrolledCourses.length}
+            {overallProgress}%
           </div>
 
           <div className={styles.percentSub}>
-            كورسات أنت مشترك فيها
+            معدل إنجاز مساراتك
           </div>
         </div>
       </section>
@@ -344,10 +365,48 @@ export default function StudentView() {
                       </span>
                     </div>
 
-                    <div className={styles.cardActions}>
+                    <div className={styles.progressWrapper}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          color: '#475569',
+                          marginBottom: '0.35rem',
+                        }}
+                      >
+                        <span>نسبة الإنجاز</span>
+                        <span>{course.progress || 0}%</span>
+                      </div>
+                      <div className={styles.progressBarBg}>
+                        <div
+                          className={styles.progressBarFill}
+                          style={{ width: `${course.progress || 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      className={styles.cardActions}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <span className={styles.lessonsCount}>
-                        {formatPrice(course.price)}
+                        {course.completedCount || 0} من {course.totalLessons || 0} درس مكتمل
                       </span>
+
+                      <Link
+                        href={`/courses/${course._id}/learn`}
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Button variant="primary" size="sm" icon={PlayCircle}>
+                          متابعة التعلم
+                        </Button>
+                      </Link>
                     </div>
 
                   </div>

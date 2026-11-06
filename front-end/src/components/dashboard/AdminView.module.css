@@ -231,6 +231,26 @@
   gap: 0.5rem;
 }
 
+.curriculumBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background-color: #EEF2FF;
+  color: #4F46E5;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid #C7D2FE;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.curriculumBtn:hover {
+  background-color: #4F46E5;
+  color: #FFFFFF;
+}
+
 .editBtn, .deleteBtn {
   padding: 0.4rem;
   border-radius: var(--radius-sm);

@@ -5,6 +5,7 @@ import { adminDashboardData } from '@/data/dashboardData';
 import { getAllCourses, addCourse, updateCourse, deleteCourse } from '@/services/course.service';
 import Button from '../common/Button';
 import CourseModal from './CourseModal';
+import CurriculumBuilder from './CurriculumBuilder';
 import {
   BookOpen,
   Users,
@@ -36,6 +37,7 @@ export default function AdminView() {
   const [editingCourse, setEditingCourse] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [selectedCurriculumCourse, setSelectedCurriculumCourse] = useState(null);
 
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
 
@@ -138,6 +140,19 @@ export default function AdminView() {
       (c.instructor || '').includes(searchQuery) ||
       (c.category || '').includes(searchQuery),
   );
+
+  // ── Render Curriculum Builder if course is selected ────────────────
+  if (selectedCurriculumCourse) {
+    return (
+      <CurriculumBuilder
+        course={selectedCurriculumCourse}
+        onBack={() => {
+          setSelectedCurriculumCourse(null);
+          fetchCourses();
+        }}
+      />
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -302,6 +317,15 @@ export default function AdminView() {
                     </td>
                     <td>
                       <div className={styles.actionBtns}>
+                        <button
+                          type="button"
+                          className={styles.curriculumBtn}
+                          onClick={() => setSelectedCurriculumCourse(course)}
+                          title="إدارة المنهج والدروس"
+                        >
+                          <BookOpen size={15} />
+                          <span>المنهج ({course.sections?.length || 0})</span>
+                        </button>
                         <button
                           className={styles.editBtn}
                           onClick={() => handleOpenEditModal(course)}

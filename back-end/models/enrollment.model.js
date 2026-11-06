@@ -17,6 +17,11 @@ const enrollmentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  completedLessons: {
+    type: [mongoose.Schema.Types.ObjectId],
+    default: [],
+  },
 });
 
 enrollmentSchema.index(

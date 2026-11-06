@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getCourse } from '@/services/course.service';
+import { getCourseCurriculum } from '@/services/curriculum.service';
 import { enrollInCourse, getMyEnrollments } from '@/services/enrollment.service';
 import useAuthStore from '@/store/auth.store';
 import Container from '@/components/common/Container';
@@ -18,12 +19,16 @@ import {
   ArrowRight,
   ShieldCheck,
   PlayCircle,
+  Play,
   FileText,
   AlertCircle,
   Loader2,
   Layers,
   Infinity as InfinityIcon,
   HelpCircle,
+  Lock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import styles from './CourseDetails.module.css';
 
@@ -40,6 +45,11 @@ export default function CourseDetailsContent({ courseId }) {
   const { user } = useAuthStore();
 
   const [course, setCourse] = useState(null);
+  const [curriculumSections, setCurriculumSections] = useState([]);
+  const [totalLessons, setTotalLessons] = useState(0);
+  const [totalDuration, setTotalDuration] = useState(0);
+  const [expandedSections, setExpandedSections] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -48,7 +58,7 @@ export default function CourseDetailsContent({ courseId }) {
   const [enrollSuccess, setEnrollSuccess] = useState('');
   const [enrollError, setEnrollError] = useState('');
 
-  // ── Fetch Course Data & Check Enrollment ─────────────────────────────
+  // ── Fetch Course Data & Curriculum & Enrollment ──────────────────────
   const loadData = useCallback(async () => {
     if (!courseId) return;
 
@@ -56,11 +66,28 @@ export default function CourseDetailsContent({ courseId }) {
       setLoading(true);
       setError('');
 
-      const res = await getCourse(courseId);
-      const courseData = res.data.data.course;
-      setCourse(courseData);
+      const [courseRes, curriculumRes] = await Promise.all([
+        getCourse(courseId),
+        getCourseCurriculum(courseId),
+      ]);
 
-      // If user is logged in, check if already enrolled
+      const courseData = courseRes.data.data.course;
+      const currData = curriculumRes.data.data;
+
+      setCourse(courseData);
+      const fetchedSections = currData.sections || [];
+      setCurriculumSections(fetchedSections);
+      setTotalLessons(currData.totalLessons || 0);
+      setTotalDuration(currData.totalDuration || 0);
+
+      // Expand first 2 sections by default
+      const initialExpanded = {};
+      fetchedSections.forEach((sec, idx) => {
+        initialExpanded[sec._id] = idx < 2;
+      });
+      setExpandedSections(initialExpanded);
+
+      // Check if user is enrolled
       if (user && user.role === 'USER') {
         try {
           const myEnrollmentsRes = await getMyEnrollments();
@@ -71,7 +98,7 @@ export default function CourseDetailsContent({ courseId }) {
           });
           setIsEnrolled(enrolled);
         } catch {
-          // Ignore error silently if enrollments check fails
+          // Ignore error silently
         }
       }
     } catch (err) {
@@ -97,6 +124,14 @@ export default function CourseDetailsContent({ courseId }) {
     };
   }, [loadData]);
 
+  // Toggle Section Collapse
+  const toggleSection = (sectionId) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  };
+
   // ── Handle Enrollment ────────────────────────────────────────────────
   const handleEnroll = async () => {
     if (!user) {
@@ -119,12 +154,26 @@ export default function CourseDetailsContent({ courseId }) {
       await enrollInCourse(courseId);
 
       setIsEnrolled(true);
-      setEnrollSuccess('تم اشتراكك في الكورس بنجاح! 🎉 يمكنك الآن متابعة التعلم.');
+      setEnrollSuccess('تم اشتراكك في الكورس بنجاح! 🎉 يمكنك الآن البدء في مشاهدة الدروس.');
     } catch (err) {
       setEnrollError(err?.response?.data?.message || 'حدث خطأ أثناء الاشتراك. يرجى المحاولة لاحقاً.');
     } finally {
       setIsEnrolling(false);
     }
+  };
+
+  // Helper: Format Duration
+  const formatDurationText = (minutes) => {
+    if (!minutes || minutes === 0) return 'محتوى تدريبي مرن';
+    const hours = Math.floor(minutes / 60);
+    const remMins = minutes % 60;
+    if (hours > 0 && remMins > 0) {
+      return `${hours} ساعة و ${remMins} دقيقة`;
+    }
+    if (hours > 0) {
+      return `${hours} ساعات تدريبية`;
+    }
+    return `${minutes} دقيقة`;
   };
 
   // ── Loading & Error States ──────────────────────────────────────────
@@ -161,14 +210,6 @@ export default function CourseDetailsContent({ courseId }) {
     'التعامل مع المشاكل الشائعة وكيفية تصحيح الأخطاء بكفاءة عالية.',
     'اكتساب المهارات المطلوبة في سوق العمل الحر والشركات التقنية.',
     'الحصول على شهادة إتمام تثبت إتقانك لكافة مخرجات ومحاور الكورس.',
-  ];
-
-  // Syllabus Chapters
-  const syllabus = [
-    { title: 'الوحدة الأولى: البداية والتأسيس النظري والعملي', lessons: 4, duration: 'ساعة و 45 دقيقة' },
-    { title: 'الوحدة الثانية: التطبيق العملي وبناء المفاهيم المتقدمة', lessons: 6, duration: 'ساعتان و 30 دقيقة' },
-    { title: 'الوحدة الثالثة: بناء مشروع حقيقي واقعي من الصفر', lessons: 5, duration: '3 ساعات و 15 دقيقة' },
-    { title: 'الوحدة الرابعة: الاختبار، التحسين، ونشر المشروع النهائي', lessons: 3, duration: 'ساعة و 15 دقيقة' },
   ];
 
   return (
@@ -209,6 +250,17 @@ export default function CourseDetailsContent({ courseId }) {
                 'دورة تدريبية متكاملة تأخذك خطوة بخطوة من البدايات وحتى الاحتراف مع التطبيق العملي.'}
             </p>
 
+            {/* Quick Button in Hero if enrolled */}
+            {isEnrolled && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <Link href={`/courses/${courseId}/learn`} style={{ textDecoration: 'none' }}>
+                  <Button variant="primary" size="lg" icon={PlayCircle}>
+                    متابعة مشاهدة الدروس الآن 🎬
+                  </Button>
+                </Link>
+              </div>
+            )}
+
             {/* Meta Row */}
             <div className={styles.metaRow}>
               {/* Instructor */}
@@ -219,16 +271,22 @@ export default function CourseDetailsContent({ courseId }) {
                 <span>المدرب: <strong>{course.instructor || 'خبير تقني'}</strong></span>
               </div>
 
+              {/* Real Lessons Count */}
+              <div className={styles.metaItem}>
+                <BookOpen size={16} />
+                <span>{totalLessons} درس</span>
+              </div>
+
+              {/* Real Total Duration */}
+              <div className={styles.metaItem}>
+                <Layers size={16} />
+                <span>{formatDurationText(totalDuration)}</span>
+              </div>
+
               {/* Rating */}
               <div className={styles.ratingBadge}>
                 <span>⭐ 4.9</span>
                 <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>(+320 تقييم)</span>
-              </div>
-
-              {/* Language */}
-              <div className={styles.metaItem}>
-                <BookOpen size={16} />
-                <span>اللغة: العربية</span>
               </div>
 
               {/* Certificate */}
@@ -262,40 +320,108 @@ export default function CourseDetailsContent({ courseId }) {
               </div>
             </div>
 
-            {/* Section 2: Course Description */}
+            {/* Section 2: Real Course Curriculum (Syllabus) */}
+            <div className={styles.cardSection}>
+              <h2 className={styles.sectionTitle}>
+                <PlayCircle size={22} className={styles.sectionTitleIcon} />
+                منهج ومحاور الدورة ({curriculumSections.length} وحدات • {totalLessons} درس)
+              </h2>
+
+              {curriculumSections.length === 0 ? (
+                <p style={{ color: '#64748B', fontSize: '0.95rem' }}>
+                  سيتم نشر وحدات ودروس هذا الكورس التدريبي قريباً.
+                </p>
+              ) : (
+                <div className={styles.curriculumList}>
+                  {curriculumSections.map((sec, sIndex) => {
+                    const isExpanded = expandedSections[sec._id] !== false;
+                    const secLessons = sec.lessons || [];
+
+                    return (
+                      <div key={sec._id} className={styles.curriculumSectionBlock}>
+                        <button
+                          type="button"
+                          className={styles.curriculumSectionHeader}
+                          onClick={() => toggleSection(sec._id)}
+                        >
+                          <div className={styles.curriculumHeaderLeft}>
+                            <span className={styles.curriculumIndex}>{sIndex + 1}</span>
+                            <div>
+                              <div className={styles.curriculumName}>{sec.title}</div>
+                              {sec.description && (
+                                <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '0.15rem' }}>
+                                  {sec.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={styles.curriculumMeta}>
+                            <span>{secLessons.length} دروس</span>
+                            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          </div>
+                        </button>
+
+                        {isExpanded && secLessons.length > 0 && (
+                          <div className={styles.curriculumLessonsList}>
+                            {secLessons.map((les) => (
+                              <div key={les._id} className={styles.curriculumLessonRow}>
+                                <div className={styles.curriculumLessonInfo}>
+                                  <PlayCircle size={16} color="var(--primary)" />
+                                  <span>{les.title}</span>
+                                </div>
+
+                                <div className={styles.curriculumLessonActions}>
+                                  {les.duration > 0 && (
+                                    <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                      {les.duration} دقيقة
+                                    </span>
+                                  )}
+
+                                  {les.isPreview ? (
+                                    <Link
+                                      href={`/courses/${courseId}/learn?lesson=${les._id}`}
+                                      className={styles.previewBadgeBtn}
+                                    >
+                                      <Play size={11} />
+                                      <span>معاينة مجانية</span>
+                                    </Link>
+                                  ) : isEnrolled ? (
+                                    <Link
+                                      href={`/courses/${courseId}/learn?lesson=${les._id}`}
+                                      style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}
+                                    >
+                                      مشاهدة ↗
+                                    </Link>
+                                  ) : (
+                                    <span className={styles.lockedTag}>
+                                      <Lock size={13} />
+                                      <span>خاص بالمشتركين</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Course Description */}
             <div className={styles.cardSection}>
               <h2 className={styles.sectionTitle}>
                 <FileText size={22} className={styles.sectionTitleIcon} />
-                وصف الكورس
+                تفاصيل الكورس
               </h2>
               <p className={styles.descriptionText}>
                 {course.description}
                 {'\n\n'}
                 تم إعداد هذا المحتوى بعناية فائقة ليركز على التطبيق العملي المباشر بدلاً من الحفظ النظري. ستتعلم من خلال بناء مشاريع حقيقية تواجهك في سوق العمل، وتكتسب المعرفة العميقة التي تميزك عن المبتدئين. بنهاية الكورس ستكون قادراً على توظيف كل ما تعلمته في أعمالك الحقيقية.
               </p>
-            </div>
-
-            {/* Section 3: Course Curriculum */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <PlayCircle size={22} className={styles.sectionTitleIcon} />
-                منهج الدورة والدروس
-              </h2>
-              <div className={styles.curriculumList}>
-                {syllabus.map((unit, index) => (
-                  <div key={index} className={styles.curriculumItem}>
-                    <div className={styles.curriculumHeader}>
-                      <span className={styles.curriculumIndex}>{index + 1}</span>
-                      <span className={styles.curriculumName}>{unit.title}</span>
-                    </div>
-                    <div className={styles.curriculumMeta}>
-                      <span>{unit.lessons} دروس</span>
-                      <span>•</span>
-                      <span>{unit.duration}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Section 4: Prerequisites */}
@@ -352,9 +478,17 @@ export default function CourseDetailsContent({ courseId }) {
                     : { background: GRADIENTS[0] }
                 }
               >
-                <div className={styles.playOverlay}>
+                <Link
+                  href={
+                    curriculumSections[0]?.lessons?.find((l) => l.isPreview)?._id
+                      ? `/courses/${courseId}/learn?lesson=${curriculumSections[0]?.lessons?.find((l) => l.isPreview)?._id}`
+                      : `/courses/${courseId}/learn`
+                  }
+                  className={styles.playOverlay}
+                  title="معاينة الكورس"
+                >
                   <PlayCircle size={32} />
-                </div>
+                </Link>
               </div>
 
               <div className={styles.sidebarBody}>
@@ -391,9 +525,9 @@ export default function CourseDetailsContent({ courseId }) {
                         <CheckCircle2 size={20} />
                         <span>أنت مسجل بالفعل في هذا الكورس</span>
                       </div>
-                      <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-                        <Button variant="primary" size="lg" fullWidth icon={ArrowLeft}>
-                          اذهب لمتابعة الكورس
+                      <Link href={`/courses/${courseId}/learn`} style={{ textDecoration: 'none' }}>
+                        <Button variant="primary" size="lg" fullWidth icon={PlayCircle}>
+                          ابدأ التعلم ومتابعة الدروس 🎬
                         </Button>
                       </Link>
                     </>
@@ -436,7 +570,7 @@ export default function CourseDetailsContent({ courseId }) {
                   </div>
                   <div className={styles.benefitItem}>
                     <PlayCircle size={18} className={styles.benefitIcon} />
-                    <span>تطبيقات ومشاريع عملية خطوة بخطوة</span>
+                    <span>{totalLessons} دروس ومشاريع تطبيقية</span>
                   </div>
                   <div className={styles.benefitItem}>
                     <ShieldCheck size={18} className={styles.benefitIcon} />
@@ -455,4 +589,3 @@ export default function CourseDetailsContent({ courseId }) {
     </div>
   );
 }
-

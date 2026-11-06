@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const Enrollment = require("../models/enrollment.model");
 const Course = require("../models/course.model");
 
@@ -8,27 +7,23 @@ const Course = require("../models/course.model");
 // @access  Private (Student)
 const enrollInCourse = async (req, res, next) => {
   try {
-    // 1. Get user ID from authenticated user
     const userId = req.currentUser._id;
-    // 2. Get course ID from request body
     const { courseId } = req.body;
 
     if (!courseId) {
       return res.status(400).json({
         status: "fail",
-        message: "Course ID is required",
+        message: "معرّف الكورس مطلوب",
       });
     }
 
-    // 3. Validate course ID
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({
         status: "fail",
-        message: "Invalid course ID",
+        message: "معرّف الكورس غير صالح",
       });
     }
 
-    // 4. Check if course exists and is active
     const course = await Course.findOne({
       _id: courseId,
       status: "active",
@@ -37,30 +32,28 @@ const enrollInCourse = async (req, res, next) => {
     if (!course) {
       return res.status(404).json({
         status: "fail",
-        message: "Course not found or unavailable",
+        message: "الكورس غير موجود أو غير متاح حالياً",
       });
     }
 
-    // 5. Create enrollment
     const enrollment = await Enrollment.create({
       user: userId,
       course: courseId,
+      completedLessons: [],
     });
 
-    // 6. Send response
     return res.status(201).json({
       status: "success",
-      message: "Successfully enrolled in course",
+      message: "تم الاشتراك في الكورس بنجاح",
       data: {
         enrollment,
       },
     });
   } catch (error) {
-    // Handle duplicate enrollment
     if (error.code === 11000) {
       return res.status(409).json({
         status: "fail",
-        message: "You are already enrolled in this course",
+        message: "أنت مسجل بالفعل في هذا الكورس",
       });
     }
 
@@ -68,7 +61,7 @@ const enrollInCourse = async (req, res, next) => {
   }
 };
 
-// @desc    Get logged-in student's courses
+// @desc    Get logged-in student's courses with calculated progress
 // @route   GET /api/enrollments/my-courses
 // @access  Private (Student)
 const getMyEnrollments = async (req, res, next) => {
@@ -80,11 +73,178 @@ const getMyEnrollments = async (req, res, next) => {
       .populate("course")
       .sort({ enrolledAt: -1 });
 
+    const enrollmentsWithProgress = enrollments.map((enr) => {
+      const courseObj = enr.course;
+      let totalLessons = 0;
+
+      if (courseObj && Array.isArray(courseObj.sections)) {
+        courseObj.sections.forEach((sec) => {
+          totalLessons += (sec.lessons || []).length;
+        });
+      }
+
+      const completedCount = (enr.completedLessons || []).length;
+      const progress =
+        totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+      return {
+        ...enr.toObject(),
+        progress,
+        totalLessons,
+        completedCount,
+      };
+    });
+
     return res.status(200).json({
       status: "success",
-      results: enrollments.length,
+      results: enrollmentsWithProgress.length,
       data: {
-        enrollments,
+        enrollments: enrollmentsWithProgress,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle lesson completion (mark complete / uncomplete)
+// @route   POST /api/enrollments/courses/:courseId/lessons/:lessonId/toggle
+// @access  Private (Student)
+const toggleLessonProgress = async (req, res, next) => {
+  try {
+    const userId = req.currentUser._id;
+    const { courseId, lessonId } = req.params;
+
+    if (!mongoose.isValidObjectId(courseId) || !mongoose.isValidObjectId(lessonId)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "المعرّفات الممررة غير صالحة",
+      });
+    }
+
+    const enrollment = await Enrollment.findOne({
+      user: userId,
+      course: courseId,
+    });
+
+    if (!enrollment) {
+      return res.status(403).json({
+        status: "fail",
+        message: "يجب الاشتراك في الكورس أولاً لمتابعة التقدم",
+      });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        status: "fail",
+        message: "الكورس غير موجود",
+      });
+    }
+
+    // Verify lesson exists in course
+    let lessonExists = false;
+    let totalLessons = 0;
+
+    for (const sec of course.sections) {
+      if (sec.lessons.id(lessonId)) {
+        lessonExists = true;
+      }
+      totalLessons += sec.lessons.length;
+    }
+
+    if (!lessonExists) {
+      return res.status(404).json({
+        status: "fail",
+        message: "الدرس غير موجود في هذا الكورس",
+      });
+    }
+
+    const lessonObjId = new mongoose.Types.ObjectId(lessonId);
+    const isCurrentlyCompleted = enrollment.completedLessons.some((id) =>
+      id.equals(lessonObjId)
+    );
+
+    let isCompleted = false;
+
+    if (isCurrentlyCompleted) {
+      // Unmark complete
+      enrollment.completedLessons.pull(lessonObjId);
+      isCompleted = false;
+    } else {
+      // Mark complete
+      enrollment.completedLessons.addToSet(lessonObjId);
+      isCompleted = true;
+    }
+
+    await enrollment.save();
+
+    const completedCount = enrollment.completedLessons.length;
+    const progressPercentage =
+      totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+    return res.status(200).json({
+      status: "success",
+      message: isCompleted ? "تم تحديد الدرس كمكتمل" : "تم إلغاء اكتمال الدرس",
+      data: {
+        isCompleted,
+        completedLessons: enrollment.completedLessons,
+        progressPercentage,
+        totalLessons,
+        completedCount,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get student progress for specific course
+// @route   GET /api/enrollments/courses/:courseId/progress
+// @access  Private (Student)
+const getCourseProgress = async (req, res, next) => {
+  try {
+    const userId = req.currentUser._id;
+    const { courseId } = req.params;
+
+    if (!mongoose.isValidObjectId(courseId)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "معرّف الكورس غير صالح",
+      });
+    }
+
+    const enrollment = await Enrollment.findOne({
+      user: userId,
+      course: courseId,
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({
+        status: "fail",
+        message: "أنت غير مشترك في هذا الكورس",
+      });
+    }
+
+    const course = await Course.findById(courseId);
+    let totalLessons = 0;
+    if (course && Array.isArray(course.sections)) {
+      course.sections.forEach((sec) => {
+        totalLessons += (sec.lessons || []).length;
+      });
+    }
+
+    const completedCount = enrollment.completedLessons.length;
+    const progressPercentage =
+      totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        completedLessons: enrollment.completedLessons,
+        completedCount,
+        totalLessons,
+        progressPercentage,
       },
     });
   } catch (error) {
@@ -95,4 +255,6 @@ const getMyEnrollments = async (req, res, next) => {
 module.exports = {
   enrollInCourse,
   getMyEnrollments,
+  toggleLessonProgress,
+  getCourseProgress,
 };
