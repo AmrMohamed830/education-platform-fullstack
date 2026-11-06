@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useCurriculum } from '@/hooks/queries/useCurriculum';
 import {
-  getCourseCurriculum,
-  addSection,
-  updateSection,
-  deleteSection,
-  addLesson,
-  updateLesson,
-  deleteLesson,
-  reorderCurriculum,
-} from '@/services/curriculum.service';
+  useAddSection,
+  useUpdateSection,
+  useDeleteSection,
+  useAddLesson,
+  useUpdateLesson,
+  useDeleteLesson,
+  useReorderCurriculum,
+} from '@/hooks/mutations/useCurriculumMutations';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Modal from '../common/Modal';
@@ -22,9 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   Video,
-  FileText,
   Clock,
-  Sparkles,
   Layers,
   BookOpen,
   ArrowUp,
@@ -37,18 +35,41 @@ import {
   Upload,
 } from 'lucide-react';
 import { uploadResourceFile } from '@/services/upload.service';
-import styles from './CurriculumBuilder.module.css';
 
 export default function CurriculumBuilder({ course, onBack }) {
   const courseId = course?._id;
+
+  const { data: currData, isLoading: loading, error: currError } = useCurriculum(courseId);
+
+  const addSectionMutation = useAddSection(courseId);
+  const updateSectionMutation = useUpdateSection(courseId);
+  const deleteSectionMutation = useDeleteSection(courseId);
+  const addLessonMutation = useAddLesson(courseId);
+  const updateLessonMutation = useUpdateLesson(courseId);
+  const deleteLessonMutation = useDeleteLesson(courseId);
+  const reorderMutation = useReorderCurriculum(courseId);
+
   const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [prevCurrSections, setPrevCurrSections] = useState(null);
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
-  const [isSaving, setIsSaving] = useState(false);
 
   // Expanded sections tracking
   const [expandedSections, setExpandedSections] = useState({});
+
+  if (currData?.sections && currData.sections !== prevCurrSections) {
+    setPrevCurrSections(currData.sections);
+    setSections(currData.sections);
+  }
+
+  const error = currError ? (currError?.response?.data?.message || 'تعذر تحميل منهج الكورس.') : '';
+  const isSaving =
+    addSectionMutation.isPending ||
+    updateSectionMutation.isPending ||
+    deleteSectionMutation.isPending ||
+    addLessonMutation.isPending ||
+    updateLessonMutation.isPending ||
+    deleteLessonMutation.isPending ||
+    reorderMutation.isPending;
 
   // ── Modals State ────────────────────────────────────────────────────
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
@@ -89,42 +110,6 @@ export default function CurriculumBuilder({ course, onBack }) {
 
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id, parentId, title }
 
-  // ── Fetch Curriculum ────────────────────────────────────────────────
-  const fetchCurriculum = useCallback(async () => {
-    if (!courseId) return;
-    try {
-      setLoading(true);
-      setError('');
-      const res = await getCourseCurriculum(courseId);
-      const fetchedSections = res.data.data.sections || [];
-      setSections(fetchedSections);
-
-      // Expand all sections by default
-      const initialExpanded = {};
-      fetchedSections.forEach((sec) => {
-        initialExpanded[sec._id] = true;
-      });
-      setExpandedSections(initialExpanded);
-    } catch (err) {
-      setError(err?.response?.data?.message || 'تعذر تحميل منهج الكورس.');
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId]);
-
-  useEffect(() => {
-    let ignore = false;
-    const init = async () => {
-      if (!ignore) {
-        await fetchCurriculum();
-      }
-    };
-    init();
-    return () => {
-      ignore = true;
-    };
-  }, [fetchCurriculum]);
-
   // ── Alert Helper ────────────────────────────────────────────────────
   const showAlert = (text, type = 'success') => {
     setAlertMsg({ text, type });
@@ -135,7 +120,7 @@ export default function CurriculumBuilder({ course, onBack }) {
   const toggleSection = (sectionId) => {
     setExpandedSections((prev) => ({
       ...prev,
-      [sectionId]: !prev[sectionId],
+      [sectionId]: prev[sectionId] === false ? true : false,
     }));
   };
 
@@ -159,21 +144,20 @@ export default function CurriculumBuilder({ course, onBack }) {
     e.preventDefault();
     if (!sectionFormData.title.trim()) return;
 
-    setIsSaving(true);
     try {
       if (editingSection) {
-        await updateSection(course._id, editingSection._id, sectionFormData);
+        await updateSectionMutation.mutateAsync({
+          sectionId: editingSection._id,
+          data: sectionFormData,
+        });
         showAlert('تم تعديل بيانات الوحدة بنجاح! ✏️');
       } else {
-        await addSection(course._id, sectionFormData);
+        await addSectionMutation.mutateAsync(sectionFormData);
         showAlert('تمت إضافة الوحدة الجديدة بنجاح! 🎉');
       }
       setIsSectionModalOpen(false);
-      await fetchCurriculum();
     } catch (err) {
       showAlert(err?.response?.data?.message || 'فشل حفظ الوحدة.', 'error');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -228,7 +212,6 @@ export default function CurriculumBuilder({ course, onBack }) {
     e.preventDefault();
     if (!lessonFormData.title.trim() || !targetSectionId) return;
 
-    setIsSaving(true);
     try {
       const payload = {
         title: lessonFormData.title.trim(),
@@ -240,39 +223,42 @@ export default function CurriculumBuilder({ course, onBack }) {
       };
 
       if (editingLesson) {
-        await updateLesson(course._id, targetSectionId, editingLesson._id, payload);
+        await updateLessonMutation.mutateAsync({
+          sectionId: targetSectionId,
+          lessonId: editingLesson._id,
+          data: payload,
+        });
         showAlert('تم تعديل الدرس بنجاح! ✏️');
       } else {
-        await addLesson(course._id, targetSectionId, payload);
+        await addLessonMutation.mutateAsync({
+          sectionId: targetSectionId,
+          data: payload,
+        });
         showAlert('تمت إضافة الدرس بنجاح! 🎉');
       }
       setIsLessonModalOpen(false);
-      await fetchCurriculum();
     } catch (err) {
       showAlert(err?.response?.data?.message || 'فشل حفظ الدرس.', 'error');
-    } finally {
-      setIsSaving(false);
     }
   };
 
   // ── Deletion Execution ──────────────────────────────────────────────
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return;
-    setIsSaving(true);
     try {
       if (deleteConfirm.type === 'section') {
-        await deleteSection(course._id, deleteConfirm.id);
+        await deleteSectionMutation.mutateAsync(deleteConfirm.id);
         showAlert('تم حذف الوحدة وجميع دروسها بنجاح! 🗑️');
       } else if (deleteConfirm.type === 'lesson') {
-        await deleteLesson(course._id, deleteConfirm.parentId, deleteConfirm.id);
+        await deleteLessonMutation.mutateAsync({
+          sectionId: deleteConfirm.parentId,
+          lessonId: deleteConfirm.id,
+        });
         showAlert('تم حذف الدرس بنجاح! 🗑️');
       }
       setDeleteConfirm(null);
-      await fetchCurriculum();
     } catch (err) {
       showAlert(err?.response?.data?.message || 'فشل الحذف.', 'error');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -295,10 +281,10 @@ export default function CurriculumBuilder({ course, onBack }) {
     setSections(newSections);
 
     try {
-      await reorderCurriculum(course._id, sectionsOrder);
+      await reorderMutation.mutateAsync(sectionsOrder);
       showAlert('تم تحديث ترتيب الوحدات!');
     } catch {
-      await fetchCurriculum();
+      if (currData?.sections) setSections(currData.sections);
       showAlert('تعذر حفظ الترتيب الجديد.', 'error');
     }
   };
@@ -334,10 +320,10 @@ export default function CurriculumBuilder({ course, onBack }) {
     ];
 
     try {
-      await reorderCurriculum(course._id, sectionsOrder);
+      await reorderMutation.mutateAsync(sectionsOrder);
       showAlert('تم تحديث ترتيب الدروس!');
     } catch {
-      await fetchCurriculum();
+      if (currData?.sections) setSections(currData.sections);
       showAlert('تعذر حفظ الترتيب الجديد.', 'error');
     }
   };
@@ -351,27 +337,33 @@ export default function CurriculumBuilder({ course, onBack }) {
   );
 
   return (
-    <div className={styles.container}>
+    <div className="flex flex-col gap-6">
       {/* ── Top Bar ── */}
-      <div className={styles.topBar}>
-        <div className={styles.topBarRight}>
-          <button type="button" className={styles.backBtn} onClick={onBack}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-wrap bg-white p-5 sm:px-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 px-4 py-2 rounded-lg font-bold text-sm cursor-pointer transition"
+            onClick={onBack}
+          >
             <ArrowRight size={18} />
             <span>العودة لقائمة الكورسات</span>
           </button>
 
-          <div className={styles.courseHeaderInfo}>
-            <h2>منهج كورس: {course.title}</h2>
-            <div className={styles.courseMetaPills}>
-              <span className={styles.metaPill}>
+          <div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 mb-1">
+              منهج كورس: {course.title}
+            </h2>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">
                 <Layers size={14} />
                 {totalSectionsCount} وحدات
               </span>
-              <span className={styles.metaPill}>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">
                 <BookOpen size={14} />
                 {totalLessonsCount} درس
               </span>
-              <span className={`${styles.metaPill} ${styles.metaPillGreen}`}>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
                 <Clock size={14} />
                 {totalDurationMinutes} دقيقة إجمالية
               </span>
@@ -386,7 +378,13 @@ export default function CurriculumBuilder({ course, onBack }) {
 
       {/* ── Alerts ── */}
       {alertMsg.text && (
-        <div className={alertMsg.type === 'error' ? styles.alertError : styles.alertSuccess}>
+        <div
+          className={`flex items-center gap-2.5 p-3.5 px-5 rounded-lg text-sm font-bold animate-[fadeIn_0.2s_ease] ${
+            alertMsg.type === 'error'
+              ? 'bg-red-50 border border-red-300 text-red-800'
+              : 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+          }`}
+        >
           {alertMsg.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
           <span>{alertMsg.text}</span>
         </div>
@@ -394,17 +392,17 @@ export default function CurriculumBuilder({ course, onBack }) {
 
       {/* ── Loading / Empty States ── */}
       {loading && (
-        <div className={styles.emptyStateContainer}>
-          <Loader2 size={36} className={styles.loadingSpinner} color="var(--primary)" />
-          <span style={{ fontWeight: 600 }}>جارٍ تحميل وحدات ودروس الكورس...</span>
+        <div className="bg-white border border-slate-200 rounded-xl p-12 sm:p-16 text-center flex flex-col items-center gap-4 text-slate-600 font-semibold">
+          <Loader2 size={36} className="text-primary animate-spin" />
+          <span>جارٍ تحميل وحدات ودروس الكورس...</span>
         </div>
       )}
 
       {!loading && sections.length === 0 && (
-        <div className={styles.emptyStateContainer}>
-          <Layers size={48} color="#94A3B8" />
-          <h3 className={styles.emptyStateTitle}>لم يتم إضافة أي وحدات دراسية بعد</h3>
-          <p className={styles.emptyStateSub}>
+        <div className="bg-white border border-slate-200 rounded-xl p-12 sm:p-16 text-center flex flex-col items-center gap-4">
+          <Layers size={48} className="text-slate-400" />
+          <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800">لم يتم إضافة أي وحدات دراسية بعد</h3>
+          <p className="text-sm sm:text-base text-slate-500 max-w-md">
             ابدأ ببناء المحتوى التعليمي لهذا الكورس بإضافة وحدتك الأولى، ثم قسّمها إلى دروس وفيديوهات وتطبيقات.
           </p>
           <Button variant="primary" icon={Plus} onClick={handleOpenAddSection}>
@@ -415,29 +413,31 @@ export default function CurriculumBuilder({ course, onBack }) {
 
       {/* ── Sections List ── */}
       {!loading && sections.length > 0 && (
-        <div className={styles.sectionsList}>
+        <div className="flex flex-col gap-5">
           {sections.map((section, sIndex) => {
             const isExpanded = expandedSections[section._id] !== false;
 
             return (
-              <div key={section._id} className={styles.sectionCard}>
+              <div key={section._id} className="bg-white border-2 border-slate-200 hover:border-slate-300 rounded-xl overflow-hidden shadow-sm transition">
                 {/* Section Header */}
-                <div className={styles.sectionHeader}>
-                  <div className={styles.sectionHeaderLeft}>
-                    <span className={styles.sectionOrderBadge}>{sIndex + 1}</span>
-                    <div className={styles.sectionTitleArea}>
-                      <span className={styles.sectionTitle}>{section.title}</span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:px-6 bg-slate-50 border-b border-slate-200 gap-4">
+                  <div className="flex items-center gap-3.5 flex-1">
+                    <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-extrabold text-sm shrink-0">
+                      {sIndex + 1}
+                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-base sm:text-lg font-extrabold text-slate-900">{section.title}</span>
                       {section.description && (
-                        <span className={styles.sectionDesc}>{section.description}</span>
+                        <span className="text-xs sm:text-sm text-slate-500">{section.description}</span>
                       )}
                     </div>
                   </div>
 
-                  <div className={styles.sectionActions}>
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {/* Reorder Buttons */}
                     <button
                       type="button"
-                      className={styles.iconBtn}
+                      className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:enabled:bg-slate-100 hover:enabled:text-primary hover:enabled:border-primary/30 disabled:opacity-35 disabled:cursor-not-allowed"
                       onClick={() => handleMoveSection(sIndex, 'up')}
                       disabled={sIndex === 0}
                       title="تحريك لأعلى"
@@ -446,7 +446,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                     </button>
                     <button
                       type="button"
-                      className={styles.iconBtn}
+                      className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:enabled:bg-slate-100 hover:enabled:text-primary hover:enabled:border-primary/30 disabled:opacity-35 disabled:cursor-not-allowed"
                       onClick={() => handleMoveSection(sIndex, 'down')}
                       disabled={sIndex === sections.length - 1}
                       title="تحريك لأسفل"
@@ -457,7 +457,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                     {/* Edit Section */}
                     <button
                       type="button"
-                      className={styles.iconBtn}
+                      className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:bg-slate-100 hover:text-primary hover:border-primary/30"
                       onClick={() => handleOpenEditSection(section)}
                       title="تعديل اسم الوحدة"
                     >
@@ -477,7 +477,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                     {/* Delete Section */}
                     <button
                       type="button"
-                      className={`${styles.iconBtn} ${styles.deleteIconBtn}`}
+                      className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                       onClick={() =>
                         setDeleteConfirm({
                           type: 'section',
@@ -493,7 +493,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                     {/* Collapse / Expand */}
                     <button
                       type="button"
-                      className={styles.toggleExpandBtn}
+                      className="w-8 h-8 flex items-center justify-center text-slate-500 cursor-pointer transition"
                       onClick={() => toggleSection(section._id)}
                       title={isExpanded ? 'طي الوحدة' : 'توسيع الوحدة'}
                     >
@@ -504,11 +504,11 @@ export default function CurriculumBuilder({ course, onBack }) {
 
                 {/* Section Lessons (Expanded) */}
                 {isExpanded && (
-                  <div className={styles.lessonsArea}>
+                  <div className="p-5 sm:p-6 bg-white flex flex-col gap-3">
                     {(!section.lessons || section.lessons.length === 0) && (
-                      <div className={styles.emptySectionLessons}>
+                      <div className="flex flex-col items-center justify-center py-8 px-4 text-center text-slate-400 border-2 border-dashed border-slate-300 rounded-lg gap-2.5">
                         <BookOpen size={28} />
-                        <span>لا توجد دروس في هذه الوحدة حتى الآن.</span>
+                        <span className="text-sm font-medium">لا توجد دروس في هذه الوحدة حتى الآن.</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -522,21 +522,21 @@ export default function CurriculumBuilder({ course, onBack }) {
 
                     {section.lessons && section.lessons.length > 0 && (
                       section.lessons.map((lesson, lIndex) => (
-                        <div key={lesson._id} className={styles.lessonItem}>
-                          <div className={styles.lessonInfoLeft}>
-                            <Video size={18} className={styles.lessonIcon} />
-                            <div className={styles.lessonDetails}>
-                              <span className={styles.lessonTitle}>{lesson.title}</span>
-                              <div className={styles.lessonMetaRow}>
+                        <div key={lesson._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:px-4 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 hover:border-slate-300 rounded-lg gap-3 transition">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Video size={18} className="text-primary shrink-0" />
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm sm:text-base font-bold text-slate-800">{lesson.title}</span>
+                              <div className="flex items-center gap-2.5 flex-wrap text-xs text-slate-500">
                                 <span>{lesson.duration || 0} دقيقة</span>
                                 <span>•</span>
                                 {lesson.isPreview ? (
-                                  <span className={styles.previewBadge}>معاينة مجانية</span>
+                                  <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-xs">معاينة مجانية</span>
                                 ) : (
-                                  <span className={styles.lockedBadge}>خاص بالمشتركين</span>
+                                  <span className="bg-slate-200 text-slate-600 font-semibold px-2 py-0.5 rounded text-xs">خاص بالمشتركين</span>
                                 )}
                                 {lesson.resources && lesson.resources.length > 0 && (
-                                  <span className={styles.resourceTag}>
+                                  <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold text-xs">
                                     {lesson.resources.length} مرفقات
                                   </span>
                                 )}
@@ -544,11 +544,11 @@ export default function CurriculumBuilder({ course, onBack }) {
                             </div>
                           </div>
 
-                          <div className={styles.lessonActions}>
+                          <div className="flex items-center gap-1.5 self-end sm:self-center">
                             {/* Reorder lesson */}
                             <button
                               type="button"
-                              className={styles.iconBtn}
+                              className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:enabled:bg-slate-100 hover:enabled:text-primary hover:enabled:border-primary/30 disabled:opacity-35 disabled:cursor-not-allowed"
                               onClick={() => handleMoveLesson(section._id, lIndex, 'up')}
                               disabled={lIndex === 0}
                               title="تحريك لأعلى"
@@ -557,7 +557,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                             </button>
                             <button
                               type="button"
-                              className={styles.iconBtn}
+                              className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:enabled:bg-slate-100 hover:enabled:text-primary hover:enabled:border-primary/30 disabled:opacity-35 disabled:cursor-not-allowed"
                               onClick={() => handleMoveLesson(section._id, lIndex, 'down')}
                               disabled={lIndex === section.lessons.length - 1}
                               title="تحريك لأسفل"
@@ -568,7 +568,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                             {/* Edit Lesson */}
                             <button
                               type="button"
-                              className={styles.iconBtn}
+                              className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:bg-slate-100 hover:text-primary"
                               onClick={() => handleOpenEditLesson(section._id, lesson)}
                               title="تعديل الدرس"
                             >
@@ -578,7 +578,7 @@ export default function CurriculumBuilder({ course, onBack }) {
                             {/* Delete Lesson */}
                             <button
                               type="button"
-                              className={`${styles.iconBtn} ${styles.deleteIconBtn}`}
+                              className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer transition hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                               onClick={() =>
                                 setDeleteConfirm({
                                   type: 'lesson',
@@ -609,7 +609,7 @@ export default function CurriculumBuilder({ course, onBack }) {
         onClose={() => setIsSectionModalOpen(false)}
         title={editingSection ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'}
       >
-        <form onSubmit={handleSaveSection} className={styles.form}>
+        <form onSubmit={handleSaveSection} className="flex flex-col gap-4">
           <Input
             label="عنوان الوحدة"
             placeholder="مثال: الوحدة الأولى: مدخل وأساسيات"
@@ -618,10 +618,10 @@ export default function CurriculumBuilder({ course, onBack }) {
             required
           />
 
-          <div className={styles.textareaGroup}>
-            <label className={styles.label}>وصف الوحدة (اختياري)</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-800">وصف الوحدة (اختياري)</label>
             <textarea
-              className={styles.textarea}
+              className="w-full p-3 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg outline-none resize-y transition focus:border-primary focus:ring-2 focus:ring-primary/20 text-right"
               rows={3}
               placeholder="وصف مختصر لمحتوى هذه الوحدة..."
               value={sectionFormData.description}
@@ -629,7 +629,7 @@ export default function CurriculumBuilder({ course, onBack }) {
             />
           </div>
 
-          <div className={styles.modalActions}>
+          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
             <Button
               type="button"
               variant="outline"
@@ -651,7 +651,7 @@ export default function CurriculumBuilder({ course, onBack }) {
         onClose={() => setIsLessonModalOpen(false)}
         title={editingLesson ? 'تعديل بيانات الدرس' : 'إضافة درس جديد'}
       >
-        <form onSubmit={handleSaveLesson} className={styles.form}>
+        <form onSubmit={handleSaveLesson} className="flex flex-col gap-4">
           <Input
             label="عنوان الدرس"
             placeholder="مثال: تثبيت بيئة العمل وإعداد المشروع"
@@ -660,10 +660,10 @@ export default function CurriculumBuilder({ course, onBack }) {
             required
           />
 
-          <div className={styles.textareaGroup}>
-            <label className={styles.label}>وصف الدرس</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-800">وصف الدرس</label>
             <textarea
-              className={styles.textarea}
+              className="w-full p-3 text-sm text-slate-800 bg-white border border-slate-200 rounded-lg outline-none resize-y transition focus:border-primary focus:ring-2 focus:ring-primary/20 text-right"
               rows={2}
               placeholder="اكتب نبذة أو ملخصاً عن محتوى هذا الدرس..."
               value={lessonFormData.description}
@@ -671,7 +671,7 @@ export default function CurriculumBuilder({ course, onBack }) {
             />
           </div>
 
-          <div className={styles.row}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="رابط الفيديو (YouTube أو Vimeo أو MP4)"
               placeholder="https://www.youtube.com/watch?v=..."
@@ -690,28 +690,28 @@ export default function CurriculumBuilder({ course, onBack }) {
           </div>
 
           {/* Preview Checkbox */}
-          <label className={styles.checkboxContainer}>
+          <label className="flex items-center gap-2.5 p-3 px-4 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
             <input
               type="checkbox"
-              className={styles.checkboxInput}
+              className="w-4 h-4 accent-primary cursor-pointer"
               checked={lessonFormData.isPreview}
               onChange={(e) => setLessonFormData({ ...lessonFormData, isPreview: e.target.checked })}
             />
             <div>
-              <div className={styles.checkboxLabel}>درس متاح للمعاينة المجانية (Preview)</div>
-              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+              <div className="text-sm font-bold text-slate-800">درس متاح للمعاينة المجانية (Preview)</div>
+              <span className="text-xs text-slate-500">
                 يمكن لأي زائر مشاهدة هذا الدرس قبل الاشتراك في الكورس.
               </span>
             </div>
           </label>
 
           {/* Resources List */}
-          <div className={styles.resourcesSection}>
-            <div className={styles.resourcesHeader}>
-              <span className={styles.label}>ملفات ومصادر خارجية للدرس ({lessonFormData.resources.length})</span>
+          <div className="flex flex-col gap-2.5 pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-800">ملفات ومصادر خارجية للدرس ({lessonFormData.resources.length})</span>
             </div>
 
-            <div className={styles.resourceRow}>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
               <Input
                 placeholder="عنوان الملف (مثال: كود الدرس على GitHub)"
                 value={newResource.title}
@@ -727,28 +727,16 @@ export default function CurriculumBuilder({ course, onBack }) {
               </Button>
             </div>
 
-            <div style={{ margin: '0.4rem 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="my-1 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => resourceFileInputRef.current?.click()}
                 disabled={uploadingResource}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.35rem 0.75rem',
-                  borderRadius: '0.375rem',
-                  border: '1px dashed #CBD5E1',
-                  background: '#F8FAFC',
-                  color: '#475569',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold cursor-pointer transition"
               >
                 {uploadingResource ? (
                   <>
-                    <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                    <Loader2 size={13} className="animate-spin" />
                     <span>جارٍ رفع الملف...</span>
                   </>
                 ) : (
@@ -762,21 +750,21 @@ export default function CurriculumBuilder({ course, onBack }) {
                 ref={resourceFileInputRef}
                 type="file"
                 accept=".pdf,.zip,.rar,.docx,.doc,.pptx,.txt"
-                style={{ display: 'none' }}
+                className="hidden"
                 onChange={handleResourceFileUpload}
               />
             </div>
 
             {lessonFormData.resources.map((res, i) => (
-              <div key={i} className={styles.resourceItemCard}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <LinkIcon size={14} color="var(--primary)" />
-                  <span style={{ fontWeight: 600 }}>{res.title}</span>
-                  <span style={{ color: '#64748B', fontSize: '0.78rem' }}>({res.url})</span>
+              <div key={i} className="flex items-center justify-between p-2 px-3 bg-slate-100 rounded-md text-sm">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <LinkIcon size={14} className="text-primary shrink-0" />
+                  <span className="font-semibold text-slate-800 truncate">{res.title}</span>
+                  <span className="text-slate-500 text-xs truncate">({res.url})</span>
                 </div>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}
+                  className="text-red-500 hover:text-red-700 cursor-pointer p-1"
                   onClick={() => handleRemoveResource(i)}
                   title="حذف الملف"
                 >
@@ -786,7 +774,7 @@ export default function CurriculumBuilder({ course, onBack }) {
             ))}
           </div>
 
-          <div className={styles.modalActions}>
+          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
             <Button
               type="button"
               variant="outline"
@@ -808,19 +796,19 @@ export default function CurriculumBuilder({ course, onBack }) {
         onClose={() => setDeleteConfirm(null)}
         title="تأكيد الحذف"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <p style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.6 }}>
+        <div className="flex flex-col gap-5">
+          <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
             هل أنت متأكد من رغبتك في حذف{' '}
             <strong>{deleteConfirm?.type === 'section' ? 'الوحدة' : 'الدرس'}</strong>: &quot;
             {deleteConfirm?.title}&quot;؟
             {deleteConfirm?.type === 'section' && (
-              <span style={{ display: 'block', color: '#DC2626', marginTop: '0.35rem', fontWeight: 600 }}>
+              <span className="block text-red-600 mt-1.5 font-semibold text-xs sm:text-sm">
                 ⚠️ تحذير: سيتم حذف جميع الدروس والمحتويات التابعة لهذه الوحدة أيضاً!
               </span>
             )}
           </p>
 
-          <div className={styles.modalActions}>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               type="button"
               variant="outline"

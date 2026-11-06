@@ -1,7 +1,8 @@
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AuthProvider from "@/components/../providers/AuthProvider";
+import AuthProvider from "@/providers/AuthProvider";
+import QueryProvider from "@/providers/QueryProvider";
 
 export const metadata = {
   title: "مَنصّتِي | المنصة التعليمية البرمجية التفاعلية",
@@ -20,11 +21,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl">
       <body>
-        <AuthProvider>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <Navbar />
+            <main>{children}</main>
+            <Footer />
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

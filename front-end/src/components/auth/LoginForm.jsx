@@ -1,38 +1,36 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Mail, Lock, LogIn, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
-import Input from "../common/Input";
-import Checkbox from "../common/Checkbox";
-import Button from "../common/Button";
-import styles from "./LoginForm.module.css";
-import { loginUser } from "../../services/auth.service";
-import useAuthStore from "@/store/auth.store";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import { Mail, Lock, LogIn, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import Input from '../common/Input';
+import Checkbox from '../common/Checkbox';
+import Button from '../common/Button';
+import { useLogin } from '@/hooks/mutations/useAuthMutations';
+import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
     rememberMe: false,
   });
 
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [generalError, setGeneralError] = useState("");
+  const [generalError, setGeneralError] = useState('');
+  const loginMutation = useLogin();
+  const isLoading = loginMutation.isPending;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
-    // Clear field-specific error when user types
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
-    if (generalError) setGeneralError("");
+    if (generalError) setGeneralError('');
   };
 
   const validate = () => {
@@ -40,74 +38,70 @@ export default function LoginForm() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.email.trim()) {
-      newErrors.email = "يرجى إدخال البريد الإلكتروني";
+      newErrors.email = 'يرجى إدخال البريد الإلكتروني';
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "يرجى إدخال بريد إلكتروني صحيح";
+      newErrors.email = 'يرجى إدخال بريد إلكتروني صحيح';
     }
 
     if (!formData.password) {
-      newErrors.password = "يرجى إدخال كلمة المرور";
+      newErrors.password = 'يرجى إدخال كلمة المرور';
     } else if (formData.password.length < 6) {
-      newErrors.password = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+      newErrors.password = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const { setUser } = useAuthStore();
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate() || isLoading || isSuccess) return;
 
-    setIsLoading(true);
-    setGeneralError("");
+    setGeneralError('');
     try {
-      const response = await loginUser({
+      await loginMutation.mutateAsync({
         email: formData.email,
         password: formData.password,
       });
 
       setIsSuccess(true);
 
-      // Smooth transition to dashboard without leaving /login in browser history
       setTimeout(() => {
-        setUser(response.data.data.user);
-        router.replace("/dashboard");
+        router.replace('/dashboard');
       }, 900);
     } catch {
-      setGeneralError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-      setIsLoading(false);
+      setGeneralError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
   };
 
-  // ── Success Creative Screen ─────────────────────────────────────────
   if (isSuccess) {
     return (
-      <div className={styles.successCard}>
-        <div className={styles.successIconWrapper}>
+      <div className="flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-300">
+        <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
           <CheckCircle2 size={42} strokeWidth={2.4} />
         </div>
-        <h3 className={styles.successTitle}>تم تسجيل الدخول بنجاح! 🎉</h3>
-        <p className={styles.successSubtitle}>
+        <h3 className="text-xl font-extrabold text-[var(--text-main)] mb-2">
+          تم تسجيل الدخول بنجاح! 🎉
+        </h3>
+        <p className="text-sm text-[var(--text-muted)] max-w-sm mb-6 leading-relaxed">
           أهلاً بك مجدداً! يتم الآن تجهيز حسابك ونقلك إلى لوحة التحكم...
         </p>
-        <div className={styles.redirectBarContainer}>
-          <div className={styles.redirectBarFill} />
+        <div className="w-full max-w-[200px] h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+          <div className="h-full bg-emerald-500 rounded-full animate-pulse w-full" />
         </div>
-        <span className={styles.redirectHint}>لحظات وسنكون هناك...</span>
+        <span className="text-xs text-[var(--text-muted)]">لحظات وسنكون هناك...</span>
       </div>
     );
   }
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit} noValidate>
+    <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
       {/* General Messages */}
       {generalError && (
-        <div className={styles.alertError}>
-          <AlertCircle size={18} />
+        <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold">
+          <AlertCircle size={18} className="shrink-0" />
           <span>{generalError}</span>
         </div>
       )}
@@ -141,7 +135,7 @@ export default function LoginForm() {
       />
 
       {/* Options Row: Remember me & Forgot Password */}
-      <div className={styles.optionsRow}>
+      <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
         <Checkbox
           label="تذكرني على هذا الجهاز"
           name="rememberMe"
@@ -152,8 +146,7 @@ export default function LoginForm() {
 
         <button
           type="button"
-          className={styles.forgotLink}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
+          className="text-xs text-[var(--primary)] hover:underline font-semibold bg-transparent border-none cursor-pointer"
           onClick={() =>
             alert(
               'لاستعادة أو إعادة تعيين كلمة المرور، يرجى التواصل مع إدارة المنصة عبر البريد: support@platform.com'
@@ -172,9 +165,8 @@ export default function LoginForm() {
         fullWidth
         icon={isLoading ? Loader2 : LogIn}
         disabled={isLoading}
-        className={isLoading ? styles.loadingBtn : ""}
       >
-        {isLoading ? "جاري التحقق من الحساب..." : "تسجيل الدخول"}
+        {isLoading ? 'جاري التحقق من الحساب...' : 'تسجيل الدخول'}
       </Button>
     </form>
   );

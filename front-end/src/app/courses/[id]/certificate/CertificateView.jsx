@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Award,
@@ -8,40 +8,18 @@ import {
   Share2,
   ArrowRight,
   ShieldCheck,
-  BookOpen,
   Loader2,
-  CheckCircle2,
 } from 'lucide-react';
-import { getCourseCertificate } from '../../../../services/certificate.service';
-import styles from './Certificate.module.css';
+import { useCourseCertificate } from '@/hooks/queries/useCertificates';
 
 export default function CertificateView({ courseId }) {
-  const [certificate, setCertificate] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: certificate, isLoading: loading, error: certError } = useCourseCertificate(courseId);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const fetchCert = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const res = await getCourseCertificate(courseId);
-        setCertificate(res.data.data.certificate);
-      } catch (err) {
-        setError(
-          err?.response?.data?.message ||
-            'لم يتم العثور على شهادة لهذا الكورس، يرجى التأكد من إكمال جميع الدروس أولاً.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (courseId) {
-      fetchCert();
-    }
-  }, [courseId]);
+  const error = certError
+    ? (certError?.response?.data?.message ||
+        'لم يتم العثور على شهادة لهذا الكورس، يرجى التأكد من إكمال جميع الدروس أولاً.')
+    : '';
 
   const handlePrint = () => {
     window.print();
@@ -67,69 +45,49 @@ export default function CertificateView({ courseId }) {
 
   if (loading) {
     return (
-      <div className={styles.pageWrapper} dir="rtl">
-        <div style={{ textAlign: 'center', padding: '6rem 0' }}>
-          <Loader2 size={44} style={{ animation: 'spin 1s linear infinite', color: '#4F46E5' }} />
-          <p style={{ marginTop: '1rem', color: '#64748B', fontWeight: 600 }}>
-            جارٍ تجهيز واستخراج شهادة إتمام الدورة...
-          </p>
-        </div>
+      <div className="min-h-[90vh] bg-slate-50 py-10 px-4 flex flex-col items-center justify-center text-center" dir="rtl">
+        <Loader2 size={44} className="animate-spin text-[var(--primary)] mb-4" />
+        <p className="text-slate-500 font-bold">جارٍ تجهيز واستخراج شهادة إتمام الدورة...</p>
       </div>
     );
   }
 
   if (error || !certificate) {
     return (
-      <div className={styles.pageWrapper} dir="rtl">
-        <div
-          style={{
-            maxWidth: '550px',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '1rem',
-            padding: '2.5rem',
-            textAlign: 'center',
-            marginTop: '3rem',
-          }}
-        >
-          <Award size={48} color="#94A3B8" style={{ marginBottom: '1rem' }} />
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.75rem' }}>
-            الشهادة غير متاحة حالياً
-          </h2>
-          <p style={{ color: '#64748B', lineHeight: 1.6, marginBottom: '2rem', fontSize: '0.95rem' }}>
-            {error}
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link
-              href={`/courses/${courseId}/learn`}
-              className={`${styles.actionBtn} ${styles.primaryBtn}`}
-            >
-              <BookOpen size={18} />
-              <span>الذهاب لمتابعة الدروس</span>
-            </Link>
-            <Link href={`/courses/${courseId}`} className={`${styles.actionBtn} ${styles.secondaryBtn}`}>
-              تفاصيل الكورس
-            </Link>
-          </div>
+      <div className="min-h-[90vh] bg-slate-50 py-16 px-4 flex flex-col items-center" dir="rtl">
+        <div className="w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+          <Award size={48} className="text-slate-400 mx-auto mb-4" />
+          <h2 className="text-xl font-extrabold text-slate-900 mb-2">الشهادة غير متاحة حالياً</h2>
+          <p className="text-sm text-slate-500 leading-relaxed mb-6">{error}</p>
+          <Link
+            href={`/courses/${courseId}/learn`}
+            className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[var(--primary)] text-white text-sm font-bold shadow-sm hover:opacity-95 transition-all no-underline"
+          >
+            <ArrowRight size={16} />
+            <span>العودة لإكمال الدروس</span>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.pageWrapper} dir="rtl">
+    <div className="min-h-[90vh] bg-slate-50 py-10 px-4 pb-20 flex flex-col items-center print:bg-white print:p-0 print:m-0" dir="rtl">
       {/* Top Toolbar (Hidden on print) */}
-      <div className={styles.actionToolbar}>
-        <Link href={`/courses/${courseId}/learn`} className={styles.backLink}>
+      <div className="flex justify-between items-center w-full max-w-4xl mb-8 flex-wrap gap-4 print:hidden">
+        <Link
+          href={`/courses/${courseId}/learn`}
+          className="inline-flex items-center gap-2 text-slate-600 font-bold text-sm hover:text-[var(--primary)] transition-colors no-underline"
+        >
           <ArrowRight size={18} />
           <span>العودة إلى مشغل الدروس</span>
         </Link>
 
-        <div className={styles.buttonsGroup}>
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`${styles.actionBtn} ${styles.secondaryBtn}`}
+            className="inline-flex items-center gap-2 py-2 px-4 rounded-xl font-bold text-sm cursor-pointer transition-all border bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
           >
             <Share2 size={16} />
             <span>{copied ? 'تم نسخ الرابط!' : 'مشاركة الرابط'}</span>
@@ -138,7 +96,7 @@ export default function CertificateView({ courseId }) {
           <button
             type="button"
             onClick={handlePrint}
-            className={`${styles.actionBtn} ${styles.primaryBtn}`}
+            className="inline-flex items-center gap-2 py-2 px-4 rounded-xl font-bold text-sm cursor-pointer transition-all border bg-[var(--primary)] text-white hover:bg-indigo-700 shadow-md border-transparent"
           >
             <Printer size={16} />
             <span>طباعة أو حفظ PDF</span>
@@ -147,52 +105,64 @@ export default function CertificateView({ courseId }) {
       </div>
 
       {/* Certificate Document */}
-      <div className={styles.certificateCanvas}>
-        <div className={styles.outerBorder}>
-          <div className={styles.innerBorder}>
+      <div className="w-full max-w-4xl aspect-[1.414/1] bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex flex-col print:shadow-none print:border-none print:w-full print:max-w-none print:aspect-auto">
+        <div className="border-4 border-double border-amber-600 rounded-xl h-full p-4 md:p-6 relative flex flex-col justify-between bg-gradient-to-br from-white to-amber-50/20">
+          <div className="border border-amber-200 rounded-lg h-full p-6 md:p-8 flex flex-col justify-between text-center relative">
             {/* Header */}
-            <div className={styles.certHeader}>
-              <div className={styles.logoBadge}>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-full flex items-center justify-center shadow-md mb-2">
                 <Award size={28} />
               </div>
-              <div className={styles.platformTitle}>مَنصّتِي التعليمية</div>
-              <h1 className={styles.certMainTitle}>شهادة إتمام دورة تدريبية</h1>
-              <div className={styles.certSubtitle}>Certificate of Course Completion</div>
+              <div className="text-lg font-extrabold text-slate-900 tracking-tight">مَنصّتِي التعليمية</div>
+              <h1 className="text-2xl md:text-3xl font-black text-amber-700 tracking-wide mt-1">
+                شهادة إتمام دورة تدريبية
+              </h1>
+              <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                Certificate of Course Completion
+              </div>
             </div>
 
             {/* Body */}
-            <div className={styles.certBody}>
-              <div className={styles.certPresentText}>تشهد المنصة بأن الطالب / الطالبة:</div>
-              <div className={styles.studentName}>{certificate.userName}</div>
-              <p className={styles.certDescription}>
+            <div className="my-auto py-6">
+              <div className="text-sm text-slate-500 font-medium mb-2">
+                تشهد المنصة بأن الطالب / الطالبة:
+              </div>
+              <div className="text-2xl md:text-4xl font-black text-indigo-700 my-3 font-serif">
+                {certificate.userName}
+              </div>
+              <p className="text-sm md:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
                 قد أتم بنجاح وبكفاءة عالية جميع متطلبات ومحاور الدورة التدريبية المتخصصة:
-                <strong className={styles.courseHighlight}>{certificate.courseTitle}</strong>
+                <strong className="text-slate-900 font-bold block mt-1">
+                  {certificate.courseTitle}
+                </strong>
               </p>
             </div>
 
             {/* Footer */}
-            <div className={styles.certFooter}>
+            <div className="flex items-end justify-between pt-6 border-t border-amber-100 flex-wrap gap-4 text-xs">
               {/* Instructor signature */}
-              <div className={styles.signatureBox}>
-                <div className={styles.signatureLine} />
-                <div className={styles.signerTitle}>{certificate.instructor}</div>
-                <div className={styles.signerRole}>مدرب الدورة التدريبية</div>
+              <div className="flex flex-col items-center min-w-[120px]">
+                <div className="w-32 h-[1.5px] bg-slate-300 mb-2" />
+                <div className="font-bold text-slate-800">{certificate.instructor}</div>
+                <div className="text-slate-500">مدرب الدورة التدريبية</div>
               </div>
 
               {/* Official Seal */}
-              <div className={styles.sealBadge}>
-                <div className={styles.sealIcon}>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-full border-2 border-amber-500 text-amber-600 flex items-center justify-center bg-amber-50">
                   <ShieldCheck size={32} />
                 </div>
-                <span className={styles.sealText}>معتمد إلكترونياً</span>
-                <span className={styles.certIdTag}>{certificate.certificateCode}</span>
+                <span className="text-[0.7rem] font-extrabold text-amber-800">معتمد إلكترونياً</span>
+                <span className="text-[0.65rem] font-mono text-slate-400 font-bold">
+                  {certificate.certificateCode}
+                </span>
               </div>
 
               {/* Platform signature & Date */}
-              <div className={styles.signatureBox}>
-                <div className={styles.signatureLine} />
-                <div className={styles.signerTitle}>إدارة المنصة الأكاديمية</div>
-                <div className={styles.signerRole}>
+              <div className="flex flex-col items-center min-w-[120px]">
+                <div className="w-32 h-[1.5px] bg-slate-300 mb-2" />
+                <div className="font-bold text-slate-800">إدارة المنصة الأكاديمية</div>
+                <div className="text-slate-500">
                   تاريخ الإصدار: {formatDate(certificate.issueDate)}
                 </div>
               </div>
@@ -203,4 +173,3 @@ export default function CertificateView({ courseId }) {
     </div>
   );
 }
-

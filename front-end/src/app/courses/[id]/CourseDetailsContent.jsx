@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getCourse } from '@/services/course.service';
-import { getCourseCurriculum } from '@/services/curriculum.service';
-import { enrollInCourse, getMyEnrollments } from '@/services/enrollment.service';
+import { useCourse } from '@/hooks/queries/useCourses';
+import { useCurriculum } from '@/hooks/queries/useCurriculum';
+import { useMyEnrollments } from '@/hooks/queries/useEnrollments';
+import { useEnrollCourse } from '@/hooks/mutations/useEnrollmentMutations';
 import useAuthStore from '@/store/auth.store';
 import Container from '@/components/common/Container';
 import Button from '@/components/common/Button';
@@ -31,7 +32,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import styles from './CourseDetails.module.css';
 
 const GRADIENTS = [
   'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
@@ -45,91 +45,34 @@ export default function CourseDetailsContent({ courseId }) {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const [course, setCourse] = useState(null);
-  const [curriculumSections, setCurriculumSections] = useState([]);
-  const [totalLessons, setTotalLessons] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(0);
+  const { data: course, isLoading: courseLoading, error: courseError } = useCourse(courseId);
+  const { data: currData, isLoading: currLoading } = useCurriculum(courseId);
+  const { data: enrollments } = useMyEnrollments(Boolean(user && user.role === 'USER'));
+  const enrollMutation = useEnrollCourse();
+  const isEnrolling = enrollMutation.isPending;
+
   const [expandedSections, setExpandedSections] = useState({});
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const [isEnrolled, setIsEnrolled] = useState(false);
-  const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollSuccess, setEnrollSuccess] = useState('');
   const [enrollError, setEnrollError] = useState('');
 
-  // ── Fetch Course Data & Curriculum & Enrollment ──────────────────────
-  const loadData = useCallback(async () => {
-    if (!courseId) return;
+  const curriculumSections = currData?.sections || [];
+  const totalLessons = currData?.totalLessons || 0;
+  const totalDuration = currData?.totalDuration || 0;
 
-    try {
-      setLoading(true);
-      setError('');
-
-      const [courseRes, curriculumRes] = await Promise.all([
-        getCourse(courseId),
-        getCourseCurriculum(courseId),
-      ]);
-
-      const courseData = courseRes.data.data.course;
-      const currData = curriculumRes.data.data;
-
-      setCourse(courseData);
-      const fetchedSections = currData.sections || [];
-      setCurriculumSections(fetchedSections);
-      setTotalLessons(currData.totalLessons || 0);
-      setTotalDuration(currData.totalDuration || 0);
-
-      // Expand first 2 sections by default
-      const initialExpanded = {};
-      fetchedSections.forEach((sec, idx) => {
-        initialExpanded[sec._id] = idx < 2;
-      });
-      setExpandedSections(initialExpanded);
-
-      // Check if user is enrolled
-      if (user && user.role === 'USER') {
-        try {
-          const myEnrollmentsRes = await getMyEnrollments();
-          const enrollmentsList = myEnrollmentsRes.data?.data?.enrollments || [];
-          const enrolled = enrollmentsList.some((e) => {
-            const enrolledId = typeof e.course === 'object' ? e.course?._id : e.course;
-            return enrolledId === courseId;
-          });
-          setIsEnrolled(enrolled);
-        } catch {
-          // Ignore error silently
-        }
-      }
-    } catch (err) {
-      setError(err?.response?.data?.message || 'تعذر تحميل بيانات الكورس.');
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId, user]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    const init = async () => {
-      if (!ignore) {
-        await loadData();
-      }
-    };
-
-    init();
-
-    return () => {
-      ignore = true;
-    };
-  }, [loadData]);
+  const isEnrolled = Boolean(
+    user &&
+      user.role === 'USER' &&
+      enrollments?.some((e) => {
+        const enrolledId = typeof e.course === 'object' ? e.course?._id : e.course;
+        return enrolledId === courseId;
+      })
+  );
 
   // Toggle Section Collapse
-  const toggleSection = (sectionId) => {
+  const toggleSection = (sectionId, defaultExpanded = true) => {
     setExpandedSections((prev) => ({
       ...prev,
-      [sectionId]: !prev[sectionId],
+      [sectionId]: prev[sectionId] !== undefined ? !prev[sectionId] : !defaultExpanded,
     }));
   };
 
@@ -148,18 +91,13 @@ export default function CourseDetailsContent({ courseId }) {
     if (isEnrolling || isEnrolled) return;
 
     try {
-      setIsEnrolling(true);
       setEnrollError('');
       setEnrollSuccess('');
 
-      await enrollInCourse(courseId);
-
-      setIsEnrolled(true);
+      await enrollMutation.mutateAsync(courseId);
       setEnrollSuccess('تم اشتراكك في الكورس بنجاح! 🎉 يمكنك الآن البدء في مشاهدة الدروس.');
     } catch (err) {
       setEnrollError(err?.response?.data?.message || 'حدث خطأ أثناء الاشتراك. يرجى المحاولة لاحقاً.');
-    } finally {
-      setIsEnrolling(false);
     }
   };
 
@@ -178,23 +116,26 @@ export default function CourseDetailsContent({ courseId }) {
   };
 
   // ── Loading & Error States ──────────────────────────────────────────
+  const loading = courseLoading || currLoading;
+  const error = courseError ? (courseError?.response?.data?.message || 'تعذر تحميل بيانات الكورس.') : '';
+
   if (loading) {
     return (
-      <div className={styles.stateContainer}>
-        <Loader2 size={46} className={styles.spinner} />
-        <h2 className={styles.stateTitle}>جارٍ تحميل تفاصيل الكورس...</h2>
-        <p className={styles.stateText}>لحظات وسنكون جاهزين.</p>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center" dir="rtl">
+        <Loader2 size={46} className="animate-spin text-[var(--primary)] mb-4" />
+        <h2 className="text-xl font-bold text-slate-800 mb-1">جارٍ تحميل تفاصيل الكورس...</h2>
+        <p className="text-sm text-slate-500">لحظات وسنكون جاهزين.</p>
       </div>
     );
   }
 
   if (error || !course) {
     return (
-      <div className={styles.stateContainer}>
-        <AlertCircle size={48} color="#EF4444" style={{ marginBottom: '1rem' }} />
-        <h2 className={styles.stateTitle}>الكورس غير موجود</h2>
-        <p className={styles.stateText}>{error || 'لم نتمكن من العثور على الكورس المطلوب.'}</p>
-        <Link href="/">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center" dir="rtl">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-slate-800 mb-1">الكورس غير موجود</h2>
+        <p className="text-sm text-slate-500 mb-6">{error || 'لم نتمكن من العثور على الكورس المطلوب.'}</p>
+        <Link href="/" className="no-underline">
           <Button variant="primary" icon={ArrowRight}>
             العودة للرئيسية
           </Button>
@@ -214,47 +155,47 @@ export default function CourseDetailsContent({ courseId }) {
   ];
 
   return (
-    <div className={styles.pageContainer}>
+    <div className="min-h-screen bg-slate-50 pb-20" dir="rtl">
       {/* ── Top Hero Section ── */}
-      <section className={styles.heroSection}>
+      <section className="bg-gradient-to-br from-slate-900 via-indigo-950 to-indigo-900 text-white py-12 md:py-16 relative overflow-hidden">
         <Container>
           {/* Breadcrumbs */}
-          <nav className={styles.breadcrumbs} aria-label="مسار التصفح">
-            <Link href="/" className={styles.breadcrumbLink}>
+          <nav className="flex items-center gap-2 text-xs text-slate-400 mb-6" aria-label="مسار التصفح">
+            <Link href="/" className="text-slate-300 hover:text-white transition-colors no-underline">
               الرئيسية
             </Link>
             <span>/</span>
-            <Link href="/#courses" className={styles.breadcrumbLink}>
+            <Link href="/courses" className="text-slate-300 hover:text-white transition-colors no-underline">
               الكورسات
             </Link>
             <span>/</span>
-            <span className={styles.breadcrumbCurrent}>{course.title}</span>
+            <span className="text-indigo-400 font-semibold truncate max-w-xs">{course.title}</span>
           </nav>
 
-          <div className={styles.heroContent}>
+          <div className="max-w-3xl">
             {/* Badges */}
-            <div className={styles.badgeRow}>
-              <span className={styles.categoryBadge}>
+            <div className="flex items-center gap-3 flex-wrap mb-5">
+              <span className="inline-flex items-center gap-1.5 bg-indigo-600/30 border border-indigo-400/40 text-indigo-200 py-1 px-3.5 rounded-full text-xs font-bold">
                 <Layers size={14} />
                 {course.category || 'مسار تعليمي'}
               </span>
-              <span className={styles.statusBadge}>
+              <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 py-1 px-3.5 rounded-full text-xs font-semibold">
                 <Sparkles size={14} />
                 متاح للتسجيل
               </span>
             </div>
 
             {/* Title & Subtitle */}
-            <h1 className={styles.courseTitle}>{course.title}</h1>
-            <p className={styles.courseSubtitle}>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight mb-4">{course.title}</h1>
+            <p className="text-base sm:text-lg text-slate-300 leading-relaxed mb-6">
               {course.description ||
                 'دورة تدريبية متكاملة تأخذك خطوة بخطوة من البدايات وحتى الاحتراف مع التطبيق العملي.'}
             </p>
 
             {/* Quick Button in Hero if enrolled */}
             {isEnrolled && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <Link href={`/courses/${courseId}/learn`} style={{ textDecoration: 'none' }}>
+              <div className="mb-6">
+                <Link href={`/courses/${courseId}/learn`} className="no-underline">
                   <Button variant="primary" size="lg" icon={PlayCircle}>
                     متابعة مشاهدة الدروس الآن 🎬
                   </Button>
@@ -263,37 +204,35 @@ export default function CourseDetailsContent({ courseId }) {
             )}
 
             {/* Meta Row */}
-            <div className={styles.metaRow}>
+            <div className="flex items-center gap-6 flex-wrap pt-5 border-t border-white/10 text-sm">
               {/* Instructor */}
-              <div className={styles.instructorMeta}>
-                <div className={styles.instructorAvatar}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm ring-2 ring-white/20">
                   {course.instructor?.charAt(0) || 'م'}
                 </div>
                 <span>المدرب: <strong>{course.instructor || 'خبير تقني'}</strong></span>
               </div>
 
               {/* Real Lessons Count */}
-              <div className={styles.metaItem}>
+              <div className="flex items-center gap-1.5 text-slate-200">
                 <BookOpen size={16} />
                 <span>{totalLessons} درس</span>
               </div>
 
               {/* Real Total Duration */}
-              <div className={styles.metaItem}>
+              <div className="flex items-center gap-1.5 text-slate-200">
                 <Layers size={16} />
                 <span>{formatDurationText(totalDuration)}</span>
               </div>
 
               {/* Rating */}
-              <div className={styles.ratingBadge}>
+              <div className="flex items-center gap-1 text-slate-200">
                 <span>⭐ {(course.averageRating || 5.0).toFixed(1)}</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>
-                  ({course.ratingsCount || 0} تقييم)
-                </span>
+                <span className="text-slate-400 text-xs">({course.ratingsCount || 0} تقييم)</span>
               </div>
 
               {/* Certificate */}
-              <div className={styles.metaItem}>
+              <div className="flex items-center gap-1.5 text-slate-200">
                 <Award size={16} />
                 <span>شهادة إتمام معتمدة</span>
               </div>
@@ -304,19 +243,19 @@ export default function CourseDetailsContent({ courseId }) {
 
       {/* ── Main Layout ── */}
       <Container>
-        <div className={styles.mainLayout}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 mt-10">
           {/* Left / Main Content Column */}
-          <div className={styles.contentCol}>
+          <div>
             {/* Section 1: What you will learn */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <CheckCircle2 size={22} className={styles.sectionTitleIcon} />
-                ماذا ستتعلم في هذا الكورس؟
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2.5">
+                <CheckCircle2 size={22} className="text-[var(--primary)]" />
+                <span>ماذا ستتعلم في هذا الكورس؟</span>
               </h2>
-              <div className={styles.objectivesGrid}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {defaultObjectives.map((obj, i) => (
-                  <div key={i} className={styles.objectiveItem}>
-                    <CheckCircle2 size={18} className={styles.checkIcon} />
+                  <div key={i} className="flex items-start gap-2.5 text-sm text-slate-700 leading-relaxed">
+                    <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>{obj}</span>
                   </div>
                 ))}
@@ -324,59 +263,61 @@ export default function CourseDetailsContent({ courseId }) {
             </div>
 
             {/* Section 2: Real Course Curriculum (Syllabus) */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <PlayCircle size={22} className={styles.sectionTitleIcon} />
-                منهج ومحاور الدورة ({curriculumSections.length} وحدات • {totalLessons} درس)
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2.5">
+                <PlayCircle size={22} className="text-[var(--primary)]" />
+                <span>منهج ومحاور الدورة ({curriculumSections.length} وحدات • {totalLessons} درس)</span>
               </h2>
 
               {curriculumSections.length === 0 ? (
-                <p style={{ color: '#64748B', fontSize: '0.95rem' }}>
+                <p className="text-slate-500 text-sm">
                   سيتم نشر وحدات ودروس هذا الكورس التدريبي قريباً.
                 </p>
               ) : (
-                <div className={styles.curriculumList}>
+                <div className="flex flex-col gap-3">
                   {curriculumSections.map((sec, sIndex) => {
-                    const isExpanded = expandedSections[sec._id] !== false;
+                    const isExpanded = expandedSections[sec._id] !== undefined ? expandedSections[sec._id] : sIndex < 2;
                     const secLessons = sec.lessons || [];
 
                     return (
-                      <div key={sec._id} className={styles.curriculumSectionBlock}>
+                      <div key={sec._id} className="border border-slate-200 rounded-xl overflow-hidden">
                         <button
                           type="button"
-                          className={styles.curriculumSectionHeader}
-                          onClick={() => toggleSection(sec._id)}
+                          className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-right cursor-pointer border-none font-inherit"
+                          onClick={() => toggleSection(sec._id, sIndex < 2)}
                         >
-                          <div className={styles.curriculumHeaderLeft}>
-                            <span className={styles.curriculumIndex}>{sIndex + 1}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-lg bg-indigo-100 text-[var(--primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                              {sIndex + 1}
+                            </span>
                             <div>
-                              <div className={styles.curriculumName}>{sec.title}</div>
+                              <div className="font-bold text-slate-900 text-sm">{sec.title}</div>
                               {sec.description && (
-                                <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '0.15rem' }}>
+                                <div className="text-xs text-slate-500 mt-0.5">
                                   {sec.description}
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          <div className={styles.curriculumMeta}>
+                          <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
                             <span>{secLessons.length} دروس</span>
                             {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                           </div>
                         </button>
 
                         {isExpanded && secLessons.length > 0 && (
-                          <div className={styles.curriculumLessonsList}>
+                          <div className="divide-y divide-slate-100 bg-white">
                             {secLessons.map((les) => (
-                              <div key={les._id} className={styles.curriculumLessonRow}>
-                                <div className={styles.curriculumLessonInfo}>
-                                  <PlayCircle size={16} color="var(--primary)" />
-                                  <span>{les.title}</span>
+                              <div key={les._id} className="flex items-center justify-between p-3.5 px-4 text-xs sm:text-sm hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-2.5">
+                                  <PlayCircle size={16} className="text-[var(--primary)] shrink-0" />
+                                  <span className="font-medium text-slate-800">{les.title}</span>
                                 </div>
 
-                                <div className={styles.curriculumLessonActions}>
+                                <div className="flex items-center gap-3">
                                   {les.duration > 0 && (
-                                    <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                                    <span className="text-xs text-slate-500 font-medium">
                                       {les.duration} دقيقة
                                     </span>
                                   )}
@@ -384,7 +325,7 @@ export default function CourseDetailsContent({ courseId }) {
                                   {les.isPreview ? (
                                     <Link
                                       href={`/courses/${courseId}/learn?lesson=${les._id}`}
-                                      className={styles.previewBadgeBtn}
+                                      className="inline-flex items-center gap-1 py-1 px-2.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs no-underline hover:bg-emerald-100"
                                     >
                                       <Play size={11} />
                                       <span>معاينة مجانية</span>
@@ -392,12 +333,12 @@ export default function CourseDetailsContent({ courseId }) {
                                   ) : isEnrolled ? (
                                     <Link
                                       href={`/courses/${courseId}/learn?lesson=${les._id}`}
-                                      style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}
+                                      className="text-[var(--primary)] font-bold text-xs no-underline hover:underline"
                                     >
                                       مشاهدة ↗
                                     </Link>
                                   ) : (
-                                    <span className={styles.lockedTag}>
+                                    <span className="inline-flex items-center gap-1 text-slate-400 text-xs">
                                       <Lock size={13} />
                                       <span>خاص بالمشتركين</span>
                                     </span>
@@ -415,12 +356,12 @@ export default function CourseDetailsContent({ courseId }) {
             </div>
 
             {/* Section 3: Course Description */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <FileText size={22} className={styles.sectionTitleIcon} />
-                تفاصيل الكورس
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2.5">
+                <FileText size={22} className="text-[var(--primary)]" />
+                <span>تفاصيل الكورس</span>
               </h2>
-              <p className={styles.descriptionText}>
+              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 {course.description}
                 {'\n\n'}
                 تم إعداد هذا المحتوى بعناية فائقة ليركز على التطبيق العملي المباشر بدلاً من الحفظ النظري. ستتعلم من خلال بناء مشاريع حقيقية تواجهك في سوق العمل، وتكتسب المعرفة العميقة التي تميزك عن المبتدئين. بنهاية الكورس ستكون قادراً على توظيف كل ما تعلمته في أعمالك الحقيقية.
@@ -428,40 +369,42 @@ export default function CourseDetailsContent({ courseId }) {
             </div>
 
             {/* Section 4: Prerequisites */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <HelpCircle size={22} className={styles.sectionTitleIcon} />
-                متطلبات الكورس
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2.5">
+                <HelpCircle size={22} className="text-[var(--primary)]" />
+                <span>متطلبات الكورس</span>
               </h2>
-              <div className={styles.prerequisitesList}>
-                <div className={styles.prerequisiteItem}>
-                  <div className={styles.bulletDot} />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] mt-2 shrink-0" />
                   <span>جهاز كمبيوتر (Windows أو Mac أو Linux) واتصال بالإنترنت.</span>
                 </div>
-                <div className={styles.prerequisiteItem}>
-                  <div className={styles.bulletDot} />
+                <div className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] mt-2 shrink-0" />
                   <span>الرغبة والشغف في التطبيق العملي وكتابة الأكواد بنفسك.</span>
                 </div>
-                <div className={styles.prerequisiteItem}>
-                  <div className={styles.bulletDot} />
+                <div className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] mt-2 shrink-0" />
                   <span>لا تشترط أي خبرة مسبقة معقدة؛ نبدأ معك من المفاهيم الأساسية خطوة بخطوة.</span>
                 </div>
               </div>
             </div>
 
             {/* Section 5: Instructor */}
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>
-                <Users size={22} className={styles.sectionTitleIcon} />
-                عن المدرب
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-4 flex items-center gap-2.5">
+                <Users size={22} className="text-[var(--primary)]" />
+                <span>عن المدرب</span>
               </h2>
-              <div className={styles.instructorCard}>
-                <div className={styles.instructorBigAvatar}>
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-extrabold text-xl flex items-center justify-center shrink-0">
                   {course.instructor?.charAt(0) || 'م'}
                 </div>
-                <div className={styles.instructorDetails}>
-                  <h4>{course.instructor || 'المدرب التقني'}</h4>
-                  <p>
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900 mb-1">
+                    {course.instructor || 'المدرب التقني'}
+                  </h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     خبير ومطور برمجيات بخبرة تزيد عن 8 سنوات في بناء وتطوير الأنظمة والتطبيقات الحديثة، شغوف بتبسيط المفاهيم البرمجية ومساعدة الطلاب على دخول سوق العمل التقني بنجاح.
                   </p>
                 </div>
@@ -473,11 +416,11 @@ export default function CourseDetailsContent({ courseId }) {
           </div>
 
           {/* Right / Sticky Sidebar */}
-          <aside className={styles.sidebarCol}>
-            <div className={styles.stickyCard}>
+          <aside>
+            <div className="sticky top-24 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg">
               {/* Image Banner */}
               <div
-                className={styles.sidebarImageBanner}
+                className="relative h-52 bg-slate-800 bg-cover bg-center flex items-center justify-center"
                 style={
                   course.image
                     ? { backgroundImage: `url(${course.image})` }
@@ -490,61 +433,61 @@ export default function CourseDetailsContent({ courseId }) {
                       ? `/courses/${courseId}/learn?lesson=${curriculumSections[0]?.lessons?.find((l) => l.isPreview)?._id}`
                       : `/courses/${courseId}/learn`
                   }
-                  className={styles.playOverlay}
+                  className="w-14 h-14 rounded-full bg-white/95 text-[var(--primary)] flex items-center justify-center shadow-xl hover:scale-110 transition-transform no-underline"
                   title="معاينة الكورس"
                 >
                   <PlayCircle size={32} />
                 </Link>
               </div>
 
-              <div className={styles.sidebarBody}>
+              <div className="p-6">
                 {/* Price Display */}
-                <div className={styles.priceWrapper}>
+                <div className="flex items-baseline gap-2 mb-6">
                   {course.price === 0 ? (
-                    <span className={styles.freeTag}>مجاناً</span>
+                    <span className="text-3xl font-black text-emerald-600">مجاناً</span>
                   ) : (
                     <>
-                      <span className={styles.currentPrice}>{course.price} $</span>
-                      <span className={styles.priceNote}>وصول شامل مدى الحياة</span>
+                      <span className="text-3xl font-black text-slate-900">{course.price} $</span>
+                      <span className="text-xs text-slate-400 font-semibold">وصول شامل مدى الحياة</span>
                     </>
                   )}
                 </div>
 
                 {/* Alerts */}
                 {enrollSuccess && (
-                  <div className={styles.successMessage}>
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold mb-4 leading-relaxed">
                     <span>{enrollSuccess}</span>
                   </div>
                 )}
 
                 {enrollError && (
-                  <div className={styles.errorMessage}>
+                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold mb-4 leading-relaxed">
                     <span>{enrollError}</span>
                   </div>
                 )}
 
                 {/* Enrollment Button Actions */}
-                <div className={styles.actionBtnGroup}>
+                <div className="flex flex-col gap-3">
                   {isEnrolled ? (
                     <>
-                      <div className={styles.enrolledAlert}>
-                        <CheckCircle2 size={20} />
+                      <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold justify-center">
+                        <CheckCircle2 size={18} />
                         <span>أنت مسجل بالفعل في هذا الكورس</span>
                       </div>
-                      <Link href={`/courses/${courseId}/learn`} style={{ textDecoration: 'none' }}>
+                      <Link href={`/courses/${courseId}/learn`} className="no-underline">
                         <Button variant="primary" size="lg" fullWidth icon={PlayCircle}>
                           ابدأ التعلم ومتابعة الدروس 🎬
                         </Button>
                       </Link>
                     </>
                   ) : !user ? (
-                    <Link href="/login" style={{ textDecoration: 'none' }}>
+                    <Link href="/login" className="no-underline">
                       <Button variant="primary" size="lg" fullWidth icon={ArrowLeft}>
                         تسجيل الدخول للاشتراك
                       </Button>
                     </Link>
                   ) : user.role !== 'USER' ? (
-                    <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+                    <Link href="/dashboard" className="no-underline">
                       <Button variant="outline" size="lg" fullWidth icon={ArrowLeft}>
                         لوحة تحكم المشرفين
                       </Button>
@@ -554,7 +497,6 @@ export default function CourseDetailsContent({ courseId }) {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      className={styles.enrollBtn}
                       onClick={handleEnroll}
                       disabled={isEnrolling}
                       icon={isEnrolling ? Loader2 : Sparkles}
@@ -565,26 +507,26 @@ export default function CourseDetailsContent({ courseId }) {
                 </div>
 
                 {/* Benefits Checklist */}
-                <div className={styles.benefitsList}>
-                  <div className={styles.benefitItem}>
-                    <InfinityIcon size={18} className={styles.benefitIcon} />
+                <div className="flex flex-col gap-3 my-6 pt-6 border-t border-slate-100 text-xs text-slate-600">
+                  <div className="flex items-center gap-2.5">
+                    <InfinityIcon size={18} className="text-[var(--primary)] shrink-0" />
                     <span>وصول كامل ودائم لجميع محتويات الكورس</span>
                   </div>
-                  <div className={styles.benefitItem}>
-                    <Award size={18} className={styles.benefitIcon} />
+                  <div className="flex items-center gap-2.5">
+                    <Award size={18} className="text-[var(--primary)] shrink-0" />
                     <span>شهادة إتمام معتمدة لملفك الشخصي</span>
                   </div>
-                  <div className={styles.benefitItem}>
-                    <PlayCircle size={18} className={styles.benefitIcon} />
+                  <div className="flex items-center gap-2.5">
+                    <PlayCircle size={18} className="text-[var(--primary)] shrink-0" />
                     <span>{totalLessons} دروس ومشاريع تطبيقية</span>
                   </div>
-                  <div className={styles.benefitItem}>
-                    <ShieldCheck size={18} className={styles.benefitIcon} />
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck size={18} className="text-[var(--primary)] shrink-0" />
                     <span>تحديثات مستمرة لدروس الكورس مجاناً</span>
                   </div>
                 </div>
 
-                <p className={styles.guaranteeNote}>
+                <p className="text-center text-xs text-slate-400 font-medium pt-4 border-t border-slate-100">
                   🔒 ضمان تجربة تعليمية متميزة واحترافية 100%
                 </p>
               </div>

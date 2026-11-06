@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -11,19 +11,15 @@ import {
   Key,
   ExternalLink,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 import Container from '../../components/common/Container';
 import useAuthStore from '../../store/auth.store';
-import { updateProfile, changePassword } from '../../services/auth.service';
+import { useUpdateProfile, useChangePassword } from '@/hooks/mutations/useAuthMutations';
+import { useMyCertificates } from '@/hooks/queries/useCertificates';
 import { uploadAvatar } from '../../services/upload.service';
-import { getMyCertificates } from '../../services/certificate.service';
-import styles from './Profile.module.css';
 
 export default function ProfileContent({ initialTab = 'profile' }) {
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
 
   const [activeTab, setActiveTab] = useState(initialTab); // 'profile' | 'security' | 'certificates'
   const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
@@ -46,45 +42,24 @@ export default function ProfileContent({ initialTab = 'profile' }) {
   }
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [profileSaving, setProfileSaving] = useState(false);
   const [profileAlert, setProfileAlert] = useState({ text: '', type: 'success' });
+
+  // Mutations & Queries
+  const updateProfileMutation = useUpdateProfile();
+  const changePasswordMutation = useChangePassword();
+  const { data: certificatesData, isLoading: loadingCertificates } = useMyCertificates(
+    activeTab === 'certificates'
+  );
+  const certificates = certificatesData || [];
+
+  const profileSaving = updateProfileMutation.isPending;
+  const passwordSaving = changePasswordMutation.isPending;
 
   // Password Form State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordAlert, setPasswordAlert] = useState({ text: '', type: 'success' });
-
-  // Certificates State
-  const [certificates, setCertificates] = useState([]);
-  const [loadingCertificates, setLoadingCertificates] = useState(false);
-
-  // Load certificates when tab is activated
-  useEffect(() => {
-    let ignore = false;
-    if (activeTab === 'certificates') {
-      const fetchCertificates = async () => {
-        try {
-          setLoadingCertificates(true);
-          const res = await getMyCertificates();
-          if (!ignore) {
-            setCertificates(res.data.data.certificates || []);
-          }
-        } catch {
-          // ignore error
-        } finally {
-          if (!ignore) {
-            setLoadingCertificates(false);
-          }
-        }
-      };
-      fetchCertificates();
-    }
-    return () => {
-      ignore = true;
-    };
-  }, [activeTab]);
 
   // Handle Avatar File Upload
   const handleAvatarFileChange = async (e) => {
@@ -117,19 +92,14 @@ export default function ProfileContent({ initialTab = 'profile' }) {
     }
 
     try {
-      setProfileSaving(true);
       setProfileAlert({ text: '', type: 'success' });
-      const res = await updateProfile({ name, avatar });
-      const updatedUser = res.data.data.user;
-      setUser(updatedUser);
+      await updateProfileMutation.mutateAsync({ name, avatar });
       setProfileAlert({ text: 'تم تحديث البيانات الشخصية بنجاح.', type: 'success' });
     } catch (err) {
       setProfileAlert({
         text: err?.response?.data?.message || 'تعذر تحديث البيانات الشخصية.',
         type: 'error',
       });
-    } finally {
-      setProfileSaving(false);
     }
   };
 
@@ -152,9 +122,8 @@ export default function ProfileContent({ initialTab = 'profile' }) {
     }
 
     try {
-      setPasswordSaving(true);
       setPasswordAlert({ text: '', type: 'success' });
-      await changePassword({ currentPassword, newPassword });
+      await changePasswordMutation.mutateAsync({ currentPassword, newPassword });
       setPasswordAlert({ text: 'تم تغيير كلمة المرور بنجاح!', type: 'success' });
       setCurrentPassword('');
       setNewPassword('');
@@ -164,8 +133,6 @@ export default function ProfileContent({ initialTab = 'profile' }) {
         text: err?.response?.data?.message || 'تعذر تغيير كلمة المرور.',
         type: 'error',
       });
-    } finally {
-      setPasswordSaving(false);
     }
   };
 
@@ -179,34 +146,37 @@ export default function ProfileContent({ initialTab = 'profile' }) {
     });
   };
 
-  const displayAvatar =
+  const avatarUrl =
     avatar ||
     user?.avatar ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      name || 'مستخدم'
+      user?.name || 'مستخدم'
     )}&background=4F46E5&color=fff&bold=true`;
 
   return (
-    <div className={styles.profilePage} dir="rtl">
+    <div className="min-h-[85vh] bg-slate-50 py-12 pb-20" dir="rtl">
       <Container>
-        {/* Profile Header Card */}
-        <div className={styles.profileHeaderCard}>
-          <div className={styles.userBasicInfo}>
-            <div className={styles.avatarWrapper}>
+        {/* Profile Card Header */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 flex items-center justify-between shadow-sm mb-8 flex-wrap gap-6">
+          <div className="flex items-center gap-6">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={displayAvatar} alt={name || 'صورة الحساب'} className={styles.avatarImg} />
-
+              <img
+                src={avatarUrl}
+                alt={user?.name || 'صورة الحساب'}
+                className="w-full h-full rounded-full object-cover border-2 border-slate-200 bg-slate-100 shadow-sm"
+              />
               <button
                 type="button"
-                className={styles.avatarUploadBtn}
+                className="absolute bottom-0 left-0 w-8 h-8 bg-[var(--primary)] text-white rounded-full border-2 border-white flex items-center justify-center cursor-pointer shadow-md hover:bg-indigo-700 hover:scale-110 transition-all"
+                title="تغيير الصورة الشخصية"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                title="تغيير الصورة الشخصية"
               >
                 {uploadingAvatar ? (
-                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Camera size={16} />
+                  <Camera size={15} />
                 )}
               </button>
 
@@ -219,29 +189,28 @@ export default function ProfileContent({ initialTab = 'profile' }) {
               />
             </div>
 
-            <div className={styles.nameBlock}>
-              <h1 className={styles.profileName}>{user?.name || 'طالب متميز'}</h1>
-              <span className={styles.profileEmail}>{user?.email}</span>
-              <div className={styles.roleBadge}>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900">
+                {user?.name || 'طالب متميز'}
+              </h1>
+              <span className="text-sm text-slate-500 font-medium">{user?.email}</span>
+              <div className="inline-flex items-center gap-1.5 py-1 px-3 bg-indigo-50 text-[var(--primary)] rounded-full text-xs font-bold w-fit mt-1">
                 <Shield size={14} />
-                <span>{user?.role === 'ADMIN' ? 'مدير عام المنصة' : user?.role === 'MANAGER' ? 'مشرف محتوى' : 'طالب مسجل'}</span>
+                <span>
+                  {user?.role === 'ADMIN'
+                    ? 'مدير عام المنصة'
+                    : user?.role === 'MANAGER'
+                    ? 'مشرف محتوى'
+                    : 'طالب مسجل'}
+                </span>
               </div>
             </div>
           </div>
 
-          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+          <Link href="/dashboard" className="no-underline">
             <button
               type="button"
-              style={{
-                padding: '0.65rem 1.25rem',
-                borderRadius: '0.625rem',
-                backgroundColor: '#F1F5F9',
-                color: '#334155',
-                border: '1px solid #CBD5E1',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-              }}
+              className="py-2.5 px-5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-sm cursor-pointer transition-colors"
             >
               الذهاب للوحة التحكم
             </button>
@@ -249,10 +218,14 @@ export default function ProfileContent({ initialTab = 'profile' }) {
         </div>
 
         {/* Tabs Bar */}
-        <div className={styles.tabsBar}>
+        <div className="flex gap-2 sm:gap-3 mb-8 border-b border-slate-200 pb-3 flex-wrap">
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'profile' ? styles.activeTab : ''}`}
+            className={`inline-flex items-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-colors border-none cursor-pointer ${
+              activeTab === 'profile'
+                ? 'text-[var(--primary)] bg-indigo-50 hover:bg-indigo-100'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 bg-transparent'
+            }`}
             onClick={() => setActiveTab('profile')}
           >
             <User size={18} />
@@ -261,7 +234,11 @@ export default function ProfileContent({ initialTab = 'profile' }) {
 
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'security' ? styles.activeTab : ''}`}
+            className={`inline-flex items-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-colors border-none cursor-pointer ${
+              activeTab === 'security'
+                ? 'text-[var(--primary)] bg-indigo-50 hover:bg-indigo-100'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 bg-transparent'
+            }`}
             onClick={() => setActiveTab('security')}
           >
             <Key size={18} />
@@ -270,7 +247,11 @@ export default function ProfileContent({ initialTab = 'profile' }) {
 
           <button
             type="button"
-            className={`${styles.tabBtn} ${activeTab === 'certificates' ? styles.activeTab : ''}`}
+            className={`inline-flex items-center gap-2 py-2.5 px-4 rounded-xl font-bold text-sm transition-colors border-none cursor-pointer ${
+              activeTab === 'certificates'
+                ? 'text-[var(--primary)] bg-indigo-50 hover:bg-indigo-100'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 bg-transparent'
+            }`}
             onClick={() => setActiveTab('certificates')}
           >
             <Award size={18} />
@@ -280,54 +261,64 @@ export default function ProfileContent({ initialTab = 'profile' }) {
 
         {/* Tab 1: Profile Details Form */}
         {activeTab === 'profile' && (
-          <div className={styles.cardContent}>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm max-w-2xl">
             {profileAlert.text && (
               <div
-                className={`${styles.alertBox} ${
-                  profileAlert.type === 'error' ? styles.alertError : styles.alertSuccess
+                className={`p-3.5 rounded-xl mb-5 text-xs font-semibold ${
+                  profileAlert.type === 'error'
+                    ? 'bg-red-50 text-red-600 border border-red-200'
+                    : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                 }`}
               >
                 {profileAlert.text}
               </div>
             )}
 
-            <form onSubmit={handleSaveProfile} className={styles.formGrid}>
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>الاسم بالكامل</label>
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">الاسم بالكامل</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
                   required
                 />
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>البريد الإلكتروني (غير قابل للتعديل)</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  البريد الإلكتروني (غير قابل للتعديل)
+                </label>
                 <input
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-100 opacity-60 outline-none cursor-not-allowed"
                 />
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>رابط الصورة الشخصية (أو ارفع من الزر أعلاه)</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  رابط الصورة الشخصية (أو ارفع من الزر أعلاه)
+                </label>
                 <input
                   type="url"
                   value={avatar}
                   onChange={(e) => setAvatar(e.target.value)}
                   placeholder="https://..."
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
                 />
               </div>
 
-              <button type="submit" disabled={profileSaving} className={styles.saveBtn}>
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[var(--primary)] text-white font-bold text-sm shadow-sm hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer mt-2"
+              >
                 {profileSaving ? (
                   <>
-                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    <Loader2 size={18} className="animate-spin" />
                     <span>جارٍ الحفظ...</span>
                   </>
                 ) : (
@@ -343,58 +334,64 @@ export default function ProfileContent({ initialTab = 'profile' }) {
 
         {/* Tab 2: Security & Change Password */}
         {activeTab === 'security' && (
-          <div className={styles.cardContent}>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm max-w-2xl">
             {passwordAlert.text && (
               <div
-                className={`${styles.alertBox} ${
-                  passwordAlert.type === 'error' ? styles.alertError : styles.alertSuccess
+                className={`p-3.5 rounded-xl mb-5 text-xs font-semibold ${
+                  passwordAlert.type === 'error'
+                    ? 'bg-red-50 text-red-600 border border-red-200'
+                    : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                 }`}
               >
                 {passwordAlert.text}
               </div>
             )}
 
-            <form onSubmit={handleChangePassword} className={styles.formGrid}>
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>كلمة المرور الحالية</label>
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">كلمة المرور الحالية</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
                   placeholder="أدخل كلمة المرور الحالية"
                   required
                 />
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>كلمة المرور الجديدة</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">كلمة المرور الجديدة</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
                   placeholder="على الأقل 6 أحرف"
                   required
                 />
               </div>
 
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>تأكيد كلمة المرور الجديدة</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-700">تأكيد كلمة المرور الجديدة</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={styles.inputField}
+                  className="w-full py-2.5 px-4 border border-slate-200 rounded-xl text-sm text-slate-800 bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
                   placeholder="أعد إدخال كلمة المرور الجديدة"
                   required
                 />
               </div>
 
-              <button type="submit" disabled={passwordSaving} className={styles.saveBtn}>
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[var(--primary)] text-white font-bold text-sm shadow-sm hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer mt-2"
+              >
                 {passwordSaving ? (
                   <>
-                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    <Loader2 size={18} className="animate-spin" />
                     <span>جارٍ التحديث...</span>
                   </>
                 ) : (
@@ -412,39 +409,31 @@ export default function ProfileContent({ initialTab = 'profile' }) {
         {activeTab === 'certificates' && (
           <div>
             {loadingCertificates ? (
-              <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#4F46E5' }} />
+              <div className="text-center py-12">
+                <Loader2 size={32} className="animate-spin text-[var(--primary)] mx-auto" />
               </div>
             ) : certificates.length === 0 ? (
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px dashed #CBD5E1',
-                  borderRadius: '1rem',
-                  padding: '3rem 1.5rem',
-                  textAlign: 'center',
-                  color: '#64748B',
-                }}
-              >
-                <Award size={44} style={{ color: '#94A3B8', marginBottom: '0.75rem' }} />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.5rem' }}>
-                  لم تحصل على أي شهادات بعد
-                </h3>
-                <p style={{ fontSize: '0.95rem' }}>
+              <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-500 max-w-xl mx-auto">
+                <Award size={44} className="text-slate-400 mx-auto mb-3" />
+                <h3 className="text-lg font-bold text-slate-900 mb-2">لم تحصل على أي شهادات بعد</h3>
+                <p className="text-sm">
                   أكمل جميع دروس أحد الكورسات المسجل بها بنسبة 100% لإصدار شهادتك المعتمدة تلقائياً!
                 </p>
               </div>
             ) : (
-              <div className={styles.certList}>
+              <div className="flex flex-col gap-4">
                 {certificates.map((cert) => (
-                  <div key={cert._id} className={styles.certItem}>
-                    <div className={styles.certItemLeft}>
-                      <div className={styles.certIconBadge}>
+                  <div
+                    key={cert._id}
+                    className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center justify-between flex-wrap gap-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                         <Award size={26} />
                       </div>
                       <div>
-                        <div className={styles.certTitle}>{cert.courseTitle}</div>
-                        <div className={styles.certDate}>
+                        <div className="text-base font-bold text-slate-900">{cert.courseTitle}</div>
+                        <div className="text-xs text-slate-400 mt-1">
                           المدرب: {cert.instructor} • تم الإصدار في: {formatDate(cert.issueDate)}
                         </div>
                       </div>
@@ -452,7 +441,7 @@ export default function ProfileContent({ initialTab = 'profile' }) {
 
                     <Link
                       href={`/courses/${cert.course}/certificate`}
-                      className={styles.viewCertBtn}
+                      className="inline-flex items-center gap-2 py-2 px-4 rounded-xl bg-indigo-50 text-[var(--primary)] font-bold text-xs hover:bg-[var(--primary)] hover:text-white transition-all no-underline"
                     >
                       <span>عرض وطباعة الشهادة</span>
                       <ExternalLink size={16} />
@@ -467,4 +456,3 @@ export default function ProfileContent({ initialTab = 'profile' }) {
     </div>
   );
 }
-

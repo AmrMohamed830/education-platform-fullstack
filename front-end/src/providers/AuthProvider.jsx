@@ -2,26 +2,21 @@
 
 import { useEffect } from "react";
 import useAuthStore from "@/store/auth.store";
-import { getCurrentUser } from "@/services/auth.service";
+import { useCurrentUser } from "@/hooks/queries/useAuth";
 
 export default function AuthProvider({ children }) {
   const setUser = useAuthStore((state) => state.setUser);
   const setIsLoading = useAuthStore((state) => state.setIsLoading);
+  const { data: user, isLoading, isError } = useCurrentUser();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await getCurrentUser();
-        setUser(response.data.data.user);
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [setUser, setIsLoading]);
+    setIsLoading(isLoading);
+    if (user) {
+      setUser(user);
+    } else if (isError) {
+      setUser(null);
+    }
+  }, [user, isLoading, isError, setUser, setIsLoading]);
 
   return children;
 }

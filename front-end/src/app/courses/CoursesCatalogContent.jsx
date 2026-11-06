@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -16,15 +16,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import Container from '../../components/common/Container';
-import { getAllCourses } from '../../services/course.service';
-import styles from './CoursesCatalog.module.css';
+import { useCourses } from '../../hooks/queries/useCourses';
 
 export default function CoursesCatalogContent() {
-  const [courses, setCourses] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
   // Filter & Search states
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -34,8 +28,6 @@ export default function CoursesCatalogContent() {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCourses, setTotalCourses] = useState(0);
 
   // Debounce search term
   useEffect(() => {
@@ -46,48 +38,24 @@ export default function CoursesCatalogContent() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch courses with current filters
-  const fetchCourses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const params = {
-        page: currentPage,
-        limit: 9,
-        search: debouncedSearch || undefined,
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        priceType: priceType !== 'all' ? priceType : undefined,
-        sort: sortOption,
-      };
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit: 9,
+      search: debouncedSearch || undefined,
+      category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      priceType: priceType !== 'all' ? priceType : undefined,
+      sort: sortOption,
+    }),
+    [currentPage, debouncedSearch, selectedCategory, priceType, sortOption]
+  );
 
-      const res = await getAllCourses(params);
-      const data = res.data.data;
-      setCourses(data.courses || []);
-      setTotalCourses(data.totalCourses || 0);
-      setTotalPages(data.totalPages || 1);
-
-      if (data.categories && data.categories.length > 0) {
-        setCategories(data.categories);
-      }
-    } catch (err) {
-      setError(err?.response?.data?.message || 'تعذر تحميل الكورسات، يرجى المحاولة لاحقاً.');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, debouncedSearch, selectedCategory, priceType, sortOption]);
-
-  useEffect(() => {
-    let ignore = false;
-    const init = async () => {
-      if (!ignore) {
-        await fetchCourses();
-      }
-    };
-    init();
-    return () => {
-      ignore = true;
-    };
-  }, [fetchCourses]);
+  const { data, isLoading: loading, error: queryError, refetch } = useCourses(queryParams);
+  const courses = data?.courses || [];
+  const totalCourses = data?.totalCourses || 0;
+  const totalPages = data?.totalPages || 1;
+  const categories = data?.categories || [];
+  const error = queryError?.response?.data?.message || (queryError ? 'تعذر تحميل الكورسات، يرجى المحاولة لاحقاً.' : '');
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -118,45 +86,47 @@ export default function CoursesCatalogContent() {
     Boolean(debouncedSearch) || selectedCategory !== 'all' || priceType !== 'all' || sortOption !== 'newest';
 
   return (
-    <div className={styles.catalogSection} dir="rtl">
+    <div className="py-12 pb-20 bg-slate-50 min-h-[85vh]" dir="rtl">
       <Container>
         {/* Page Header */}
-        <div className={styles.header}>
-          <div className={styles.badge}>
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 py-1.5 px-4 bg-indigo-50 text-[var(--primary)] rounded-full text-sm font-bold mb-3.5">
             <Sparkles size={16} />
             <span>مكتبة الكورسات والدورات</span>
           </div>
-          <h1 className={styles.title}>استكشف مسارك التعليمي القادم</h1>
-          <p className={styles.subtitle}>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[var(--text-main)] leading-tight mb-3">
+            استكشف مسارك التعليمي القادم
+          </h1>
+          <p className="text-base text-slate-500 leading-relaxed">
             دورات تدريبية متخصصة في مجالات البرمجة، التصميم، وتطوير المهارات مع نخبة من أفضل المدربين.
           </p>
         </div>
 
         {/* Toolbar & Filters */}
-        <div className={styles.toolbarCard}>
-          <div className={styles.searchSortRow}>
+        <div className="bg-white border border-[var(--border-light)] rounded-2xl p-5 shadow-sm mb-8 flex flex-col gap-5">
+          <div className="flex gap-4 items-center flex-wrap">
             {/* Search Input */}
-            <div className={styles.searchBox}>
-              <Search size={18} className={styles.searchIcon} />
+            <div className="relative flex-1 min-w-[260px]">
+              <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="ابحث عن اسم الكورس أو الموضوع..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={styles.searchInput}
+                className="w-full py-3 pr-11 pl-4 border-[1.5px] border-[var(--border-light)] rounded-xl text-[0.95rem] text-[var(--text-main)] bg-slate-50 focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
               />
             </div>
 
             {/* Filter Controls (Price & Sort) */}
-            <div className={styles.filterControls}>
-              <div className={styles.selectGroup}>
+            <div className="flex gap-3 items-center flex-wrap">
+              <div className="relative min-w-[150px]">
                 <select
                   value={priceType}
                   onChange={(e) => {
                     setPriceType(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className={styles.selectInput}
+                  className="w-full py-3 px-4 border-[1.5px] border-[var(--border-light)] rounded-xl text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-[var(--primary)] outline-none cursor-pointer transition-all"
                 >
                   <option value="all">كل الأسعار</option>
                   <option value="free">كورسات مجانية</option>
@@ -164,14 +134,14 @@ export default function CoursesCatalogContent() {
                 </select>
               </div>
 
-              <div className={styles.selectGroup}>
+              <div className="relative min-w-[150px]">
                 <select
                   value={sortOption}
                   onChange={(e) => {
                     setSortOption(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className={styles.selectInput}
+                  className="w-full py-3 px-4 border-[1.5px] border-[var(--border-light)] rounded-xl text-sm text-slate-700 bg-slate-50 focus:bg-white focus:border-[var(--primary)] outline-none cursor-pointer transition-all"
                 >
                   <option value="newest">الأحدث إضافة</option>
                   <option value="rating">الأعلى تقييماً</option>
@@ -183,11 +153,15 @@ export default function CoursesCatalogContent() {
           </div>
 
           {/* Category Chips */}
-          <div className={styles.categoryChips}>
-            <span className={styles.categoryLabel}>التصنيف:</span>
+          <div className="flex gap-2 items-center flex-wrap pt-3 border-t border-dashed border-slate-200">
+            <span className="text-xs font-bold text-slate-500 ml-2">التصنيف:</span>
             <button
               type="button"
-              className={`${styles.chip} ${selectedCategory === 'all' ? styles.chipActive : ''}`}
+              className={`py-1.5 px-3.5 rounded-full text-xs font-semibold border transition-all ${
+                selectedCategory === 'all'
+                  ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
               onClick={() => {
                 setSelectedCategory('all');
                 setCurrentPage(1);
@@ -199,7 +173,11 @@ export default function CoursesCatalogContent() {
               <button
                 key={cat}
                 type="button"
-                className={`${styles.chip} ${selectedCategory === cat ? styles.chipActive : ''}`}
+                className={`py-1.5 px-3.5 rounded-full text-xs font-semibold border transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                }`}
                 onClick={() => {
                   setSelectedCategory(cat);
                   setCurrentPage(1);
@@ -212,12 +190,16 @@ export default function CoursesCatalogContent() {
         </div>
 
         {/* Results Bar */}
-        <div className={styles.resultsBar}>
+        <div className="flex items-center justify-between mb-6 text-sm text-slate-500">
           <span>
-            تم العثور على <strong>{totalCourses}</strong> كورس
+            تم العثور على <strong className="text-slate-800">{totalCourses}</strong> كورس
           </span>
           {hasActiveFilters && (
-            <button type="button" onClick={handleResetFilters} className={styles.resetBtn}>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--primary)] hover:underline bg-transparent border-none cursor-pointer"
+            >
               <RotateCcw size={14} />
               <span>إعادة ضبط الفلاتر</span>
             </button>
@@ -226,37 +208,36 @@ export default function CoursesCatalogContent() {
 
         {/* Loading State */}
         {loading ? (
-          <div
-            style={{
-              padding: '4rem 0',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '1rem',
-            }}
-          >
-            <Loader2 size={38} style={{ animation: 'spin 1s linear infinite', color: '#4F46E5' }} />
-            <p style={{ color: '#64748B', fontWeight: 600 }}>جارٍ البحث وتحديث النتائج...</p>
+          <div className="py-16 flex flex-col items-center justify-center gap-3">
+            <Loader2 size={38} className="animate-spin text-[var(--primary)]" />
+            <p className="text-slate-500 font-semibold text-sm">جارٍ البحث وتحديث النتائج...</p>
           </div>
         ) : error ? (
-          <div className={styles.emptyState}>
-            <h3 className={styles.emptyTitle}>حدث خطأ</h3>
-            <p className={styles.emptyText}>{error}</p>
-            <button type="button" onClick={fetchCourses} className={styles.detailsBtn}>
+          <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[var(--border-light)] max-w-lg mx-auto">
+            <h3 className="text-lg font-bold text-red-600 mb-2">حدث خطأ</h3>
+            <p className="text-sm text-slate-500 mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="py-2 px-4 rounded-xl bg-indigo-50 text-[var(--primary)] font-bold text-xs"
+            >
               إعادة المحاولة
             </button>
           </div>
         ) : courses.length === 0 ? (
           /* Empty State */
-          <div className={styles.emptyState}>
-            <BookOpen size={48} className={styles.emptyIcon} />
-            <h3 className={styles.emptyTitle}>لم يتم العثور على أي كورسات</h3>
-            <p className={styles.emptyText}>
+          <div className="text-center py-16 px-4 bg-white rounded-2xl border border-[var(--border-light)] max-w-lg mx-auto">
+            <BookOpen size={48} className="text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-800 mb-2">لم يتم العثور على أي كورسات</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
               لا توجد كورسات مطابقة لشروط البحث والفلاتر الحالية. جرب تغيير كلمات البحث أو إعادة ضبط الفلاتر.
             </p>
             {hasActiveFilters && (
-              <button type="button" onClick={handleResetFilters} className={styles.detailsBtn}>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="py-2.5 px-5 rounded-xl bg-[var(--primary)] text-white font-bold text-xs shadow-sm hover:opacity-95"
+              >
                 عرض جميع الكورسات
               </button>
             )}
@@ -264,7 +245,7 @@ export default function CoursesCatalogContent() {
         ) : (
           /* Courses Grid */
           <>
-            <div className={styles.courseGrid}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((course) => {
                 const lessonCount = getCourseLessonCount(course);
                 const totalMinutes = getCourseTotalMinutes(course);
@@ -274,66 +255,79 @@ export default function CoursesCatalogContent() {
                     : 'ذاتي التقدم';
 
                 return (
-                  <div key={course._id} className={styles.courseCard}>
+                  <div
+                    key={course._id}
+                    className="flex flex-col bg-white border border-[var(--border-light)] rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  >
                     {/* Course Image */}
-                    <div className={styles.imageWrapper}>
+                    <div className="relative h-48 overflow-hidden bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={course.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60'}
+                        src={
+                          course.image ||
+                          'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60'
+                        }
                         alt={course.title}
-                        className={styles.courseImg}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       />
-                      <span className={styles.categoryTag}>{course.category || 'عام'}</span>
+                      <span className="absolute top-3 right-3 text-xs font-bold py-1 px-2.5 bg-white/95 backdrop-blur-md text-[var(--primary)] rounded-full shadow-sm">
+                        {course.category || 'عام'}
+                      </span>
                     </div>
 
                     {/* Card Body */}
-                    <div className={styles.cardBody}>
-                      <h3 className={styles.courseTitle} title={course.title}>
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="text-lg font-extrabold text-[var(--text-main)] mb-2 line-clamp-2 leading-snug" title={course.title}>
                         {course.title}
                       </h3>
-                      <p className={styles.courseDesc}>{course.description}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed mb-4 line-clamp-2 flex-1">
+                        {course.description}
+                      </p>
 
                       {/* Meta information */}
-                      <div className={styles.metaRow}>
-                        <div className={styles.metaItem}>
+                      <div className="flex items-center gap-3 text-xs text-slate-500 py-3 border-t border-b border-slate-100 mb-4 flex-wrap">
+                        <div className="flex items-center gap-1">
                           <User size={14} />
                           <span>{course.instructor || 'مدرب معتمد'}</span>
                         </div>
 
                         {lessonCount > 0 && (
-                          <div className={styles.metaItem}>
+                          <div className="flex items-center gap-1">
                             <BookOpen size={14} />
                             <span>{lessonCount} درس</span>
                           </div>
                         )}
 
                         {totalMinutes > 0 && (
-                          <div className={styles.metaItem}>
+                          <div className="flex items-center gap-1">
                             <Clock size={14} />
                             <span>{durationText}</span>
                           </div>
                         )}
 
-                        <div className={styles.ratingBadge}>
-                          <Star size={14} fill="#F59E0B" color="#F59E0B" />
+                        <div className="flex items-center gap-1 font-bold text-slate-700 mr-auto">
+                          <Star size={14} className="fill-amber-400 text-amber-400" />
                           <span>{(course.averageRating || 5.0).toFixed(1)}</span>
                         </div>
                       </div>
 
                       {/* Card Footer */}
-                      <div className={styles.cardFooter}>
-                        <div className={styles.priceWrapper}>
-                          <span className={styles.priceLabel}>الرسوم</span>
+                      <div className="flex items-center justify-between mt-auto">
+                        <div className="flex flex-col">
+                          <span className="text-[0.7rem] text-slate-400 font-semibold">الرسوم</span>
                           <span
-                            className={`${styles.priceValue} ${
-                              course.price === 0 ? styles.freePrice : ''
+                            className={`text-lg font-black ${
+                              course.price === 0 ? 'text-emerald-600' : 'text-slate-900'
                             }`}
                           >
                             {course.price === 0 ? 'مجانًا' : `$${course.price}`}
                           </span>
                         </div>
 
-                        <Link href={`/courses/${course._id}`} className={styles.detailsBtn}>
+                        <Link
+                          href={`/courses/${course._id}`}
+                          className="inline-flex items-center gap-2 py-2 px-4 rounded-xl bg-indigo-50 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-all text-xs font-bold no-underline"
+                        >
                           <span>تفاصيل الكورس</span>
                           <ArrowLeft size={16} />
                         </Link>
@@ -346,10 +340,10 @@ export default function CoursesCatalogContent() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className={styles.pagination}>
+              <div className="flex items-center justify-center gap-2 mt-12">
                 <button
                   type="button"
-                  className={styles.pageBtn}
+                  className="py-2 px-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:border-slate-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   title="الصفحة السابقة"
@@ -362,7 +356,11 @@ export default function CoursesCatalogContent() {
                   <button
                     key={pageNum}
                     type="button"
-                    className={`${styles.pageBtn} ${currentPage === pageNum ? styles.pageActive : ''}`}
+                    className={`py-2 px-3.5 rounded-xl border text-sm font-semibold transition-colors ${
+                      currentPage === pageNum
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
                     onClick={() => setCurrentPage(pageNum)}
                   >
                     {pageNum}
@@ -371,7 +369,7 @@ export default function CoursesCatalogContent() {
 
                 <button
                   type="button"
-                  className={styles.pageBtn}
+                  className="py-2 px-3.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:border-slate-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   title="الصفحة التالية"
@@ -387,4 +385,3 @@ export default function CoursesCatalogContent() {
     </div>
   );
 }
-
