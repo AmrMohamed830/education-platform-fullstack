@@ -31,7 +31,7 @@ import {
 
 import styles from "./StudentView.module.css";
 
-export default function StudentView() {
+export default function StudentView({ activeTab = "overview" }) {
   const { user } = useAuthStore();
 
   const [enrollments, setEnrollments] = useState([]);
@@ -182,32 +182,99 @@ export default function StudentView() {
     <div className={styles.container}>
 
       {/* Welcome Banner */}
-      <section className={styles.welcomeBanner}>
-        <div className={styles.bannerContent}>
-          <div className={styles.badge}>
-            <Sparkles size={15} />
-            لوحة الطالب
-          </div>
+      {activeTab === "overview" && (
+        <>
+          <section className={styles.welcomeBanner}>
+            <div className={styles.bannerContent}>
+              <div className={styles.badge}>
+                <Sparkles size={15} />
+                لوحة الطالب
+              </div>
 
-          <h1 className={styles.bannerTitle}>
-            أهلاً بيك {user?.name || "طالبنا"} 👋
-          </h1>
+              <h1 className={styles.bannerTitle}>
+                أهلاً بيك {user?.name || "طالبنا"} 👋
+              </h1>
 
-          <p className={styles.bannerSub}>
-            استمر في رحلتك التعليمية واكتشف كورسات جديدة تطور بيها مهاراتك.
-          </p>
-        </div>
+              <p className={styles.bannerSub}>
+                استمر في رحلتك التعليمية واكتشف كورسات جديدة تطور بيها مهاراتك.
+              </p>
+            </div>
 
-        <div className={styles.progressRingCard}>
-          <div className={styles.percentText}>
-            {overallProgress}%
-          </div>
+            <div className={styles.progressRingCard}>
+              <div className={styles.percentText}>
+                {overallProgress}%
+              </div>
 
-          <div className={styles.percentSub}>
-            معدل إنجاز مساراتك
-          </div>
-        </div>
-      </section>
+              <div className={styles.percentSub}>
+                معدل إنجاز مساراتك
+              </div>
+            </div>
+          </section>
+
+          {/* Statistics */}
+          <section className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statIconBox}>
+                <BookOpen size={24} />
+              </div>
+
+              <div>
+                <div className={styles.statVal}>
+                  {enrolledCourses.length}
+                </div>
+                <div className={styles.statLab}>
+                  الكورسات المسجل فيها
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconBox}>
+                <GraduationCap size={24} />
+              </div>
+
+              <div>
+                <div className={styles.statVal}>
+                  {availableCourses.length}
+                </div>
+                <div className={styles.statLab}>
+                  كورسات متاحة
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconBox}>
+                <Users size={24} />
+              </div>
+
+              <div>
+                <div className={styles.statVal}>
+                  {new Set(courses.map((course) => course.category)).size}
+                </div>
+                <div className={styles.statLab}>
+                  تصنيفات الكورسات
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIconBox}>
+                <Calendar size={24} />
+              </div>
+
+              <div>
+                <div className={styles.statVal}>
+                  {formatDate(latestEnrollment?.enrolledAt)}
+                </div>
+                <div className={styles.statLab}>
+                  آخر اشتراك
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -222,71 +289,6 @@ export default function StudentView() {
           <p>{successMessage}</p>
         </div>
       )}
-
-      {/* Statistics */}
-      <section className={styles.statsGrid}>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIconBox}>
-            <BookOpen size={24} />
-          </div>
-
-          <div>
-            <div className={styles.statVal}>
-              {enrolledCourses.length}
-            </div>
-            <div className={styles.statLab}>
-              الكورسات المسجل فيها
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIconBox}>
-            <GraduationCap size={24} />
-          </div>
-
-          <div>
-            <div className={styles.statVal}>
-              {availableCourses.length}
-            </div>
-            <div className={styles.statLab}>
-              كورسات متاحة
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIconBox}>
-            <Users size={24} />
-          </div>
-
-          <div>
-            <div className={styles.statVal}>
-              {new Set(courses.map((course) => course.category)).size}
-            </div>
-            <div className={styles.statLab}>
-              تصنيفات الكورسات
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIconBox}>
-            <Calendar size={24} />
-          </div>
-
-          <div>
-            <div className={styles.statVal}>
-              {formatDate(latestEnrollment?.enrolledAt)}
-            </div>
-            <div className={styles.statLab}>
-              آخر اشتراك
-            </div>
-          </div>
-        </div>
-
-      </section>
 
       {/* Main Content */}
       <section className={styles.mainGrid}>

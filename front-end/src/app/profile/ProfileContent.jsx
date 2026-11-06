@@ -21,11 +21,17 @@ import { uploadAvatar } from '../../services/upload.service';
 import { getMyCertificates } from '../../services/certificate.service';
 import styles from './Profile.module.css';
 
-export default function ProfileContent() {
+export default function ProfileContent({ initialTab = 'profile' }) {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'certificates'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'profile' | 'security' | 'certificates'
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab);
+    setActiveTab(initialTab);
+  }
+
   const fileInputRef = useRef(null);
 
   // Profile Form State

@@ -5,6 +5,8 @@ import Sidebar from "./Sidebar";
 import DashboardNavbar from "./DashboardNavbar";
 import StudentView from "./StudentView";
 import AdminView from "./AdminView";
+import ProfileContent from "../../app/profile/ProfileContent";
+import CoursesCatalogContent from "../../app/courses/CoursesCatalogContent";
 import styles from "./DashboardLayout.module.css";
 import useAuthStore from "@/store/auth.store";
 
@@ -36,7 +38,15 @@ export default function DashboardLayout() {
 
         {/* Dynamic Main Dashboard Content */}
         <main className={styles.contentArea}>
-          {isAdmin ? <AdminView /> : <StudentView />}
+          {activeTab === "settings" && <ProfileContent initialTab="profile" />}
+          {activeTab === "certificates" && <ProfileContent initialTab="certificates" />}
+          {activeTab === "explore" && <CoursesCatalogContent />}
+          {(activeTab === "overview" || activeTab === "my-courses") && !isAdmin && (
+            <StudentView activeTab={activeTab} />
+          )}
+          {(activeTab === "overview" || activeTab === "courses-manage" || activeTab === "students-manage") && isAdmin && (
+            <AdminView activeTab={activeTab} />
+          )}
         </main>
       </div>
     </div>

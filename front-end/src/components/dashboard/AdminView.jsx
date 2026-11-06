@@ -27,7 +27,7 @@ const { stats, recentStudents } = adminDashboardData;
 // Map backend status value to Arabic display label
 const statusLabel = (status) => (status === 'active' ? 'نشط' : 'مسودة');
 
-export default function AdminView() {
+export default function AdminView({ activeTab = 'overview' }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -185,55 +185,58 @@ export default function AdminView() {
         </div>
       )}
 
-      {/* KPI Stats Grid — totals from mock pending real enrollment/payment APIs */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <span className={styles.statLabel}>إجمالي الكورسات</span>
-            <div className={styles.iconBox} style={{ background: '#EEF2FF', color: '#4F46E5' }}>
-              <BookOpen size={20} />
+      {/* KPI Stats Grid — only on overview */}
+      {activeTab === 'overview' && (
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <span className={styles.statLabel}>إجمالي الكورسات</span>
+              <div className={styles.iconBox} style={{ background: '#EEF2FF', color: '#4F46E5' }}>
+                <BookOpen size={20} />
+              </div>
             </div>
+            <div className={styles.statVal}>{courses.length}</div>
+            <div className={styles.statSub}>كورسات في قاعدة البيانات</div>
           </div>
-          <div className={styles.statVal}>{courses.length}</div>
-          <div className={styles.statSub}>كورسات في قاعدة البيانات</div>
-        </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <span className={styles.statLabel}>إجمالي الطلاب</span>
-            <div className={styles.iconBox} style={{ background: '#ECFDF5', color: '#10B981' }}>
-              <Users size={20} />
+          <div className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <span className={styles.statLabel}>إجمالي الطلاب</span>
+              <div className={styles.iconBox} style={{ background: '#ECFDF5', color: '#10B981' }}>
+                <Users size={20} />
+              </div>
             </div>
+            <div className={styles.statVal}>{stats.totalStudents.toLocaleString()}</div>
+            <div className={styles.statSub}>نمو بنسبة {stats.monthlyGrowth}</div>
           </div>
-          <div className={styles.statVal}>{stats.totalStudents.toLocaleString()}</div>
-          <div className={styles.statSub}>نمو بنسبة {stats.monthlyGrowth}</div>
-        </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <span className={styles.statLabel}>إجمالي الإيرادات</span>
-            <div className={styles.iconBox} style={{ background: '#FEF3C7', color: '#D97706' }}>
-              <DollarSign size={20} />
+          <div className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <span className={styles.statLabel}>إجمالي الإيرادات</span>
+              <div className={styles.iconBox} style={{ background: '#FEF3C7', color: '#D97706' }}>
+                <DollarSign size={20} />
+              </div>
             </div>
+            <div className={styles.statVal}>{stats.totalRevenue}</div>
+            <div className={styles.statSub}>صافي أرباح الدورات</div>
           </div>
-          <div className={styles.statVal}>{stats.totalRevenue}</div>
-          <div className={styles.statSub}>صافي أرباح الدورات</div>
-        </div>
 
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <span className={styles.statLabel}>المدربون والخبراء</span>
-            <div className={styles.iconBox} style={{ background: '#F3E8FF', color: '#9333EA' }}>
-              <GraduationCap size={20} />
+          <div className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <span className={styles.statLabel}>المدربون والخبراء</span>
+              <div className={styles.iconBox} style={{ background: '#F3E8FF', color: '#9333EA' }}>
+                <GraduationCap size={20} />
+              </div>
             </div>
+            <div className={styles.statVal}>{stats.totalInstructors}</div>
+            <div className={styles.statSub}>في مختلف التخصصات</div>
           </div>
-          <div className={styles.statVal}>{stats.totalInstructors}</div>
-          <div className={styles.statSub}>في مختلف التخصصات</div>
         </div>
-      </div>
+      )}
 
       {/* Course Management Section */}
-      <div className={styles.sectionCard}>
+      {activeTab !== 'students-manage' && (
+        <div className={styles.sectionCard}>
         <div className={styles.tableHeader}>
           <div>
             <h2 className={styles.sectionTitle}>إدارة الكورسات المتاحة</h2>
@@ -349,41 +352,44 @@ export default function AdminView() {
           </div>
         )}
       </div>
+      )}
 
       {/* Recent Registered Students Table — mock data, enrollment system out of scope */}
-      <div className={styles.sectionCard}>
-        <div className={styles.tableHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>أحدث الطلاب المنضمين</h2>
-            <p className={styles.sectionSub}>آخر المسجلين في المنصة خلال الأيام الأخيرة</p>
+      {activeTab !== 'courses-manage' && (
+        <div className={styles.sectionCard}>
+          <div className={styles.tableHeader}>
+            <div>
+              <h2 className={styles.sectionTitle}>أحدث الطلاب المنضمين</h2>
+              <p className={styles.sectionSub}>آخر المسجلين في المنصة خلال الأيام الأخيرة</p>
+            </div>
+          </div>
+
+          <div className={styles.tableResponsive}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>اسم الطالب</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>الكورس المسجل</th>
+                  <th>تاريخ التسجيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentStudents.map((st) => (
+                  <tr key={st.id}>
+                    <td className={styles.studentNameCell}>{st.name}</td>
+                    <td>{st.email}</td>
+                    <td>
+                      <span className={styles.catBadge}>{st.course}</span>
+                    </td>
+                    <td className={styles.dateCell}>{st.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-
-        <div className={styles.tableResponsive}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>اسم الطالب</th>
-                <th>البريد الإلكتروني</th>
-                <th>الكورس المسجل</th>
-                <th>تاريخ التسجيل</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentStudents.map((st) => (
-                <tr key={st.id}>
-                  <td className={styles.studentNameCell}>{st.name}</td>
-                  <td>{st.email}</td>
-                  <td>
-                    <span className={styles.catBadge}>{st.course}</span>
-                  </td>
-                  <td className={styles.dateCell}>{st.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
