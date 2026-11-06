@@ -371,6 +371,26 @@ const addLesson = async (req, res, next) => {
 
     const createdLesson = section.lessons[section.lessons.length - 1];
 
+    // Notify enrolled students about the new lesson
+    try {
+      const Enrollment = require("../models/enrollment.model");
+      const Notification = require("../models/notification.model");
+
+      const enrollments = await Enrollment.find({ course: courseId }).select("user");
+      if (enrollments.length > 0) {
+        const notifDocs = enrollments.map((e) => ({
+          recipient: e.user,
+          title: "درس جديد متاح 🎬",
+          message: `تمت إضافة درس جديد "${createdLesson.title}" في كورس "${course.title}".`,
+          type: "NEW_LESSON",
+          link: `/courses/${courseId}/learn?lesson=${createdLesson._id}`,
+        }));
+        await Notification.insertMany(notifDocs);
+      }
+    } catch (notifErr) {
+      console.error("Lesson notification failed:", notifErr.message);
+    }
+
     return res.status(201).json({
       status: "success",
       message: "تمت إضافة الدرس بنجاح",

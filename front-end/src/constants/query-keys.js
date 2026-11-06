@@ -39,5 +39,8 @@ export const QUERY_KEYS = {
     myAttempts: ['quizzes', 'my-attempts'],
     courseAttempts: (courseId) => ['quizzes', 'course-attempts', courseId],
   },
+  notifications: {
+    all: ['notifications'],
+  },
 };
 

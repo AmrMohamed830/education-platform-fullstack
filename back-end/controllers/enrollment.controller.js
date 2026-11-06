@@ -42,6 +42,21 @@ const enrollInCourse = async (req, res, next) => {
       completedLessons: [],
     });
 
+    // Notify Admins about the new student enrollment
+    try {
+      const Notification = require("../models/notification.model");
+      const studentName = req.currentUser.name || "طالب جديد";
+      await Notification.create({
+        recipientRole: "ADMIN",
+        title: "طالب جديد التحق بكورس 🎓",
+        message: `سجّل الطالب "${studentName}" في كورس "${course.title}".`,
+        type: "NEW_ENROLLMENT",
+        link: "/dashboard",
+      });
+    } catch (notifErr) {
+      console.error("Enrollment notification failed:", notifErr.message);
+    }
+
     return res.status(201).json({
       status: "success",
       message: "تم الاشتراك في الكورس بنجاح",

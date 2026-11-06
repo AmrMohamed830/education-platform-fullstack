@@ -51,6 +51,7 @@ const uploadRoutes = require("./routes/upload.routes");
 const reviewRoutes = require("./routes/review.routes");
 const certificateRoutes = require("./routes/certificate.routes");
 const quizRoutes = require("./routes/quiz.routes");
+const notificationRoutes = require("./routes/notification.routes");
 
 app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
@@ -59,6 +60,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/quizzes", quizRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const url = process.env.MONGO_URL;
 

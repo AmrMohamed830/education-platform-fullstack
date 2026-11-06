@@ -76,12 +76,21 @@ export default function QuizPlayerContent({ courseId }) {
     try {
       setSubmitError('');
       const answersMap = customAnswers || selectedAnswers;
-      const answersPayload = Object.entries(answersMap).map(
-        ([questionId, selectedOption]) => ({
-          questionId,
-          selectedOption,
-        })
-      );
+
+      // Construct a reliable payload mapping each question by _id and by index
+      const answersPayload = questions.map((q, idx) => {
+        const selected =
+          answersMap[q._id] !== undefined
+            ? answersMap[q._id]
+            : answersMap[idx] !== undefined
+            ? answersMap[idx]
+            : -1;
+
+        return {
+          questionId: q._id ? String(q._id) : String(idx),
+          selectedOption: Number(selected),
+        };
+      });
 
       const res = await submitMutation.mutateAsync(answersPayload);
       setSubmissionResult(res.data.data);
@@ -89,7 +98,7 @@ export default function QuizPlayerContent({ courseId }) {
     } catch (err) {
       setSubmitError(err?.response?.data?.message || 'حدث خطأ أثناء تصحيح الاختبار.');
     }
-  }, [selectedAnswers, submitMutation]);
+  }, [questions, selectedAnswers, submitMutation]);
 
   // Timer countdown
   useEffect(() => {
@@ -120,6 +129,7 @@ export default function QuizPlayerContent({ courseId }) {
     setSelectedAnswers((prev) => ({
       ...prev,
       [questionId]: optionIndex,
+      [currentQuestionIdx]: optionIndex,
     }));
   };
 
@@ -292,7 +302,9 @@ export default function QuizPlayerContent({ courseId }) {
               {/* Options */}
               <div className={styles.optionsList}>
                 {currentQuestion.options?.map((opt, optIdx) => {
-                  const isSelected = selectedAnswers[currentQuestion._id] === optIdx;
+                  const isSelected =
+                    selectedAnswers[currentQuestion._id] === optIdx ||
+                    selectedAnswers[currentQuestionIdx] === optIdx;
 
                   return (
                     <button
@@ -359,8 +371,19 @@ export default function QuizPlayerContent({ courseId }) {
   }
 
   // ── SCREEN 3: RESULTS ──
-  const isPassed = submissionResult?.isPassed ?? false;
-  const score = submissionResult?.score ?? 0;
+  const attemptData = submissionResult?.attempt || submissionResult || {};
+  const isPassed =
+    attemptData?.isPassed ??
+    attemptData?.passed ??
+    submissionResult?.isPassed ??
+    submissionResult?.passed ??
+    false;
+  const score = attemptData?.score ?? submissionResult?.score ?? 0;
+  const earnedPoints =
+    attemptData?.earnedPoints ?? submissionResult?.earnedPoints ?? 0;
+  const totalPoints =
+    attemptData?.totalPoints ?? submissionResult?.totalPoints ?? 0;
+  const questionResults = submissionResult?.questionResults || [];
 
   return (
     <div className={styles.wrapper}>
@@ -390,7 +413,7 @@ export default function QuizPlayerContent({ courseId }) {
             <div style={{ width: '1px', height: '40px', background: 'var(--border-light)' }} />
             <div className={styles.scoreItem}>
               <span className={styles.scoreVal} style={{ color: 'var(--text-main)' }}>
-                {submissionResult?.earnedPoints || 0} / {submissionResult?.totalPoints || 0}
+                {earnedPoints} / {totalPoints}
               </span>
               <span className={styles.scoreLabel}>مجموع النقاط</span>
             </div>
@@ -415,6 +438,70 @@ export default function QuizPlayerContent({ courseId }) {
               </Button>
             </Link>
           </div>
+
+          {/* Detailed Question Review Breakdown */}
+          {questionResults.length > 0 && (
+            <div style={{ width: '100%', marginTop: '2.5rem', textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
+                مراجعة إجابات الاختبار:
+              </h3>
+
+              {questionResults.map((qr, index) => {
+                const questionIsRight = qr.isCorrect;
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      background: questionIsRight ? '#F0FDF4' : '#FEF2F2',
+                      border: `1.5px solid ${questionIsRight ? '#BBF7D0' : '#FECACA'}`,
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.25rem 1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.65rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: questionIsRight ? '#166534' : '#991B1B' }}>
+                        سؤال {index + 1}: {qr.questionText}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '999px',
+                          backgroundColor: questionIsRight ? '#DCFCE7' : '#FEE2E2',
+                          color: questionIsRight ? '#15803D' : '#DC2626',
+                        }}
+                      >
+                        {questionIsRight ? 'إجابة صحيحة ✓' : 'إجابة خاطئة ✗'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.875rem', color: '#334155' }}>
+                      <strong>إجابتك: </strong>
+                      <span>{qr.options[qr.selectedOption] || 'لم يتم تحديد إجابة'}</span>
+                    </div>
+
+                    {!questionIsRight && qr.correctOptionIndex !== undefined && (
+                      <div style={{ fontSize: '0.875rem', color: '#15803D' }}>
+                        <strong>الإجابة الصحيحة: </strong>
+                        <span>{qr.options[qr.correctOptionIndex]}</span>
+                      </div>
+                    )}
+
+                    {qr.explanation && (
+                      <p style={{ fontSize: '0.825rem', color: '#64748B', fontStyle: 'italic', marginTop: '0.25rem' }}>
+                        💡 {qr.explanation}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

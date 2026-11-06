@@ -154,6 +154,24 @@ const upsertCourseQuiz = async (req, res, next) => {
       });
     }
 
+    // Notify enrolled students about the quiz
+    try {
+      const Notification = require("../models/notification.model");
+      const enrollments = await Enrollment.find({ course: courseId }).select("user");
+      if (enrollments.length > 0) {
+        const notifDocs = enrollments.map((e) => ({
+          recipient: e.user,
+          title: "اختبار تقييمي متاح 📝",
+          message: `تم نشر/تحديث اختبار "${quiz.title}" لكورس "${course.title}". ابدأ الحل الآن!`,
+          type: "NEW_QUIZ",
+          link: `/courses/${courseId}/quiz`,
+        }));
+        await Notification.insertMany(notifDocs);
+      }
+    } catch (notifErr) {
+      console.error("Quiz notification failed:", notifErr.message);
+    }
+
     return res.status(200).json({
       status: "success",
       message: "تم حفظ الاختبار بنجاح 🎉",
@@ -208,22 +226,31 @@ const submitQuiz = async (req, res, next) => {
     let totalPoints = 0;
     const answersMap = new Map();
 
-    answers.forEach((ans) => {
+    answers.forEach((ans, index) => {
       if (ans.questionId) {
         answersMap.set(String(ans.questionId), Number(ans.selectedOption));
       }
+      answersMap.set(String(index), Number(ans.selectedOption));
     });
 
     const evaluatedAnswers = [];
     const questionResults = [];
 
-    quiz.questions.forEach((question) => {
+    quiz.questions.forEach((question, idx) => {
       const qId = String(question._id);
       const points = question.points || 10;
       totalPoints += points;
 
-      const studentSelected = answersMap.has(qId) ? answersMap.get(qId) : -1;
-      const isCorrect = studentSelected === question.correctOptionIndex;
+      let studentSelected = -1;
+      if (answersMap.has(qId) && answersMap.get(qId) !== undefined && answersMap.get(qId) !== -1) {
+        studentSelected = answersMap.get(qId);
+      } else if (answersMap.has(String(idx))) {
+        studentSelected = answersMap.get(String(idx));
+      } else if (Array.isArray(answers) && answers[idx] && answers[idx].selectedOption !== undefined) {
+        studentSelected = Number(answers[idx].selectedOption);
+      }
+
+      const isCorrect = studentSelected !== -1 && Number(studentSelected) === Number(question.correctOptionIndex);
 
       if (isCorrect) {
         earnedPoints += points;
@@ -275,12 +302,19 @@ const submitQuiz = async (req, res, next) => {
         ? "تهانينا! لقد اجتزت الاختبار بنجاح 🎉"
         : "للأسف لم تحقق درجة النجاح المطلوبة، يمكنك المحاولة مرة أخرى.",
       data: {
+        isPassed: passed,
+        passed,
+        score,
+        earnedPoints,
+        totalPoints,
+        passingScore: quiz.passingScore,
         attempt: {
           _id: attempt._id,
           score,
           earnedPoints,
           totalPoints,
           passed,
+          isPassed: passed,
           passingScore: quiz.passingScore,
           attemptNumber: attempt.attemptNumber,
           completedAt: attempt.completedAt,
