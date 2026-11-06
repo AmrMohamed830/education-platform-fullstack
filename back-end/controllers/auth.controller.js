@@ -86,18 +86,20 @@ const login = async (req, res) => {
 };
 
 const getCurrentUser = async (req, res) => {
-  const user =await User.findById(req.currentUser.id).select("-password -token");
-  if(user){
+  if (req.currentUser) {
     res.status(200).json({
       status: "success",
       data: {
-        user,
+        user: req.currentUser,
       },
     });
-  }else{
-    res.status(404).json("the user are not found")
+  } else {
+    res.status(404).json({
+      status: "fail",
+      message: "User not found",
+    });
   }
-}
+};
 const logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,

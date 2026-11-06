@@ -1,7 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { BookOpen, ArrowLeft, CheckCircle2, Star, Sparkles } from 'lucide-react';
+import useAuthStore from '@/store/auth.store';
 import styles from './AuthLayout.module.css';
 
 export default function AuthLayout({
@@ -12,6 +15,20 @@ export default function AuthLayout({
   footerLinkText,
   footerLinkHref,
 }) {
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, isLoading, router]);
+
+  if (!isLoading && user) {
+    return null;
+  }
+
   return (
     <div className={styles.pageWrapper}>
       {/* Background Decorative Blobs */}
@@ -61,7 +78,7 @@ export default function AuthLayout({
                 ))}
               </div>
               <p className={styles.quoteText}>
-                "المنصة غيّرت مساري المهني بالكامل في أقل من 6 أشهر وتمكنت من الالتحاق بوظيفتي كـ Full Stack Developer."
+                &ldquo;المنصة غيّرت مساري المهني بالكامل في أقل من 6 أشهر وتمكنت من الالتحاق بوظيفتي كـ Full Stack Developer.&rdquo;
               </p>
               <div className={styles.quoteAuthor}>- عبدالله الشمري، مطور برمجيات</div>
             </div>

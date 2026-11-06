@@ -16,12 +16,11 @@ const userRoles = require("../utils/userRoles");
 
 router.route("/")
 .get(getAllCourses)
-.post(verifyToken,allowedTo(userRoles.ADMIN),addCourse)
-
+.post(verifyToken, allowedTo(userRoles.ADMIN, userRoles.MANAGER), addCourse);
 
 router.route('/:courseId')
 .get(getCourse)
-.patch(verifyToken,allowedTo(userRoles.ADMIN),updateCourse)
-.delete(verifyToken,allowedTo(userRoles.ADMIN),deleteCourse);
+.patch(verifyToken, allowedTo(userRoles.ADMIN, userRoles.MANAGER), updateCourse)
+.delete(verifyToken, allowedTo(userRoles.ADMIN, userRoles.MANAGER), deleteCourse);
 
 module.exports = router;

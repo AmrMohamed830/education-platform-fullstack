@@ -84,13 +84,13 @@ export default function Hero() {
                     <span className={styles.keyword}>const</span> <span className={styles.variable}>student</span> = <span className={styles.keyword}>new</span> <span className={styles.function}>Developer</span>();
                   </div>
                   <div className={styles.codeLine}>
-                    <span className={styles.variable}>student</span>.<span className={styles.function}>learnPath</span>(<span className={styles.string}>'Full-Stack Web'</span>);
+                    <span className={styles.variable}>student</span>.<span className={styles.function}>learnPath</span>(<span className={styles.string}>&apos;Full-Stack Web&apos;</span>);
                   </div>
                   <div className={styles.codeLine}>
                     <span className={styles.variable}>student</span>.<span className={styles.function}>buildRealProjects</span>();
                   </div>
                   <div className={styles.codeLine}>
-                    <span className={styles.comment}>// 🎉 النتيجة: جاهز لوظيفتك الأولى!</span>
+                    <span className={styles.comment}>{'// 🎉 النتيجة: جاهز لوظيفتك الأولى!'}</span>
                   </div>
                 </div>
 

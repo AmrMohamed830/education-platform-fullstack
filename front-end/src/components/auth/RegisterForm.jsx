@@ -9,6 +9,7 @@ import {
   UserPlus,
   AlertCircle,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import Input from "../common/Input";
 import Checkbox from "../common/Checkbox";
@@ -23,8 +24,8 @@ import { useForm, Controller } from "react-hook-form";
 
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [generalError, setGeneralError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const {
     register,
@@ -47,9 +48,9 @@ export default function RegisterForm() {
   const router = useRouter();
 
   const onSubmit = async (data) => {
+    if (isLoading || isSuccess) return;
     setIsLoading(true);
     setGeneralError("");
-    setSuccessMessage("");
 
     try {
       const response = await registerUser({
@@ -58,20 +59,41 @@ export default function RegisterForm() {
         password: data.password,
       });
 
-      setUser(response.data.data.user);
-      setSuccessMessage("تم إنشاء الحساب بنجاح!");
+      setIsSuccess(true);
 
-      router.push("/dashboard");
+      // Smooth transition to dashboard without leaving /register in browser history
+      setTimeout(() => {
+        setUser(response.data.data.user);
+        router.replace("/dashboard");
+      }, 900);
     } catch (err) {
       if (err.response?.status === 409) {
-        setGeneralError("الإيميل ده مسجل بالفعل");
+        setGeneralError("هذا البريد الإلكتروني مسجل بالفعل");
       } else {
-        setGeneralError("حصلت مشكلة أثناء إنشاء الحساب. حاول مرة تانية");
+        setGeneralError("حدثت مشكلة أثناء إنشاء الحساب. حاول مرة أخرى");
       }
-    } finally {
       setIsLoading(false);
     }
   };
+
+  // ── Success Creative Screen ─────────────────────────────────────────
+  if (isSuccess) {
+    return (
+      <div className={styles.successCard}>
+        <div className={styles.successIconWrapper}>
+          <CheckCircle2 size={42} strokeWidth={2.4} />
+        </div>
+        <h3 className={styles.successTitle}>تم إنشاء الحساب بنجاح! 🎉</h3>
+        <p className={styles.successSubtitle}>
+          مرحباً بك في مَنصّتِي! يتم الآن تجهيز مساحتك التعليمية ونقلك إلى لوحة التحكم...
+        </p>
+        <div className={styles.redirectBarContainer}>
+          <div className={styles.redirectBarFill} />
+        </div>
+        <span className={styles.redirectHint}>لحظات وسنكون هناك...</span>
+      </div>
+    );
+  }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -83,12 +105,6 @@ export default function RegisterForm() {
         </div>
       )}
 
-      {successMessage && (
-        <div className={styles.alertSuccess}>
-          <span>{successMessage}</span>
-        </div>
-      )}
-
       {/* Full Name Input */}
       <Input
         label="الاسم الكامل"
@@ -97,6 +113,7 @@ export default function RegisterForm() {
         placeholder="أحمد محمد"
         error={errors.fullName?.message}
         icon={User}
+        disabled={isLoading}
         required
         {...register("fullName")}
       />
@@ -108,6 +125,7 @@ export default function RegisterForm() {
         placeholder="example@domain.com"
         error={errors.email?.message}
         icon={Mail}
+        disabled={isLoading}
         required
         {...register("email")}
       />
@@ -119,6 +137,7 @@ export default function RegisterForm() {
         placeholder="8 أحرف على الأقل"
         error={errors.password?.message}
         icon={Lock}
+        disabled={isLoading}
         required
         {...register("password")}
       />
@@ -131,6 +150,7 @@ export default function RegisterForm() {
         placeholder="أعد إدخال كلمة المرور"
         error={errors.confirmPassword?.message}
         icon={ShieldCheck}
+        disabled={isLoading}
         required
         {...register("confirmPassword")}
       />
@@ -144,6 +164,7 @@ export default function RegisterForm() {
               label="أوافق على الشروط والأحكام وسياسة الخصوصية للمنصة"
               name={field.name}
               checked={field.value}
+              disabled={isLoading}
               onChange={(event) => field.onChange(event.target.checked)}
             />
           )}

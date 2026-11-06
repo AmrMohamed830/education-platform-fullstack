@@ -35,6 +35,7 @@ export default function AdminView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   const [alertMsg, setAlertMsg] = useState({ text: '', type: 'success' });
 
@@ -77,23 +78,27 @@ export default function AdminView() {
   // ── Modal helpers ───────────────────────────────────────────────────
   const handleOpenAddModal = () => {
     setEditingCourse(null);
+    setModalError('');
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (course) => {
     setEditingCourse(course);
+    setModalError('');
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCourse(null);
+    setModalError('');
   };
 
   // ── Save (add or update) ────────────────────────────────────────────
   const handleSaveCourse = async (formData) => {
     if (isSaving) return;
     setIsSaving(true);
+    setModalError('');
     try {
       if (editingCourse) {
         await updateCourse(editingCourse._id, formData);
@@ -106,6 +111,7 @@ export default function AdminView() {
       await fetchCourses();
     } catch (err) {
       const msg = err?.response?.data?.message || 'حدث خطأ أثناء حفظ الكورس.';
+      setModalError(msg);
       showAlert(msg, 'error');
     } finally {
       setIsSaving(false);
@@ -356,13 +362,17 @@ export default function AdminView() {
       </div>
 
       {/* Add/Edit Modal */}
-      <CourseModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSave={handleSaveCourse}
-        initialData={editingCourse}
-        isSaving={isSaving}
-      />
+      {isModalOpen && (
+        <CourseModal
+          key={editingCourse?._id || 'new-course'}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSave={handleSaveCourse}
+          initialData={editingCourse}
+          isSaving={isSaving}
+          error={modalError}
+        />
+      )}
     </div>
   );
 }

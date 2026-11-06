@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Modal from '../common/Modal';
 import Input from '../common/Input';
 import Button from '../common/Button';
+import { AlertCircle } from 'lucide-react';
 import styles from './CourseModal.module.css';
 
 const EMPTY_FORM = {
@@ -16,12 +17,17 @@ const EMPTY_FORM = {
   status: 'active',
 };
 
-export default function CourseModal({ isOpen, onClose, onSave, initialData = null, isSaving = false }) {
-  const [formData, setFormData] = useState(EMPTY_FORM);
-
-  useEffect(() => {
+export default function CourseModal({
+  isOpen,
+  onClose,
+  onSave,
+  initialData = null,
+  isSaving = false,
+  error = '',
+}) {
+  const [formData, setFormData] = useState(() => {
     if (initialData) {
-      setFormData({
+      return {
         title: initialData.title || '',
         description: initialData.description || '',
         instructor: initialData.instructor || '',
@@ -29,11 +35,10 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
         price: initialData.price !== undefined ? String(initialData.price) : '',
         image: initialData.image || '',
         status: initialData.status || 'active',
-      });
-    } else {
-      setFormData(EMPTY_FORM);
+      };
     }
-  }, [initialData, isOpen]);
+    return EMPTY_FORM;
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,6 +65,14 @@ export default function CourseModal({ isOpen, onClose, onSave, initialData = nul
       title={initialData ? 'تعديل بيانات الكورس' : 'إضافة كورس جديد'}
     >
       <form onSubmit={handleSubmit} className={styles.form}>
+        {/* Error inside modal */}
+        {error && (
+          <div className={styles.modalError}>
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Title */}
         <Input
           label="عنوان الكورس"

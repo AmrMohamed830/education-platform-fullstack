@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, LogIn, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, LogIn, AlertCircle, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import Input from "../common/Input";
 import Checkbox from "../common/Checkbox";
 import Button from "../common/Button";
@@ -19,8 +19,8 @@ export default function LoginForm() {
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [generalError, setGeneralError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -56,31 +56,51 @@ export default function LoginForm() {
   };
 
   const { setUser } = useAuthStore();
-
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || isLoading || isSuccess) return;
 
     setIsLoading(true);
     setGeneralError("");
-    setSuccessMessage("");
     try {
       const response = await loginUser({
         email: formData.email,
         password: formData.password,
       });
-      setUser(response.data.data.user);
 
-      setSuccessMessage("تم تسجيل الدخول بنجاح! جاري تحويلك...");
-      router.push("/dashboard");
+      setIsSuccess(true);
+
+      // Smooth transition to dashboard without leaving /login in browser history
+      setTimeout(() => {
+        setUser(response.data.data.user);
+        router.replace("/dashboard");
+      }, 900);
     } catch {
       setGeneralError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  // ── Success Creative Screen ─────────────────────────────────────────
+  if (isSuccess) {
+    return (
+      <div className={styles.successCard}>
+        <div className={styles.successIconWrapper}>
+          <CheckCircle2 size={42} strokeWidth={2.4} />
+        </div>
+        <h3 className={styles.successTitle}>تم تسجيل الدخول بنجاح! 🎉</h3>
+        <p className={styles.successSubtitle}>
+          أهلاً بك مجدداً! يتم الآن تجهيز حسابك ونقلك إلى لوحة التحكم...
+        </p>
+        <div className={styles.redirectBarContainer}>
+          <div className={styles.redirectBarFill} />
+        </div>
+        <span className={styles.redirectHint}>لحظات وسنكون هناك...</span>
+      </div>
+    );
+  }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
@@ -89,12 +109,6 @@ export default function LoginForm() {
         <div className={styles.alertError}>
           <AlertCircle size={18} />
           <span>{generalError}</span>
-        </div>
-      )}
-
-      {successMessage && (
-        <div className={styles.alertSuccess}>
-          <span>{successMessage}</span>
         </div>
       )}
 
@@ -108,6 +122,7 @@ export default function LoginForm() {
         onChange={handleChange}
         error={errors.email}
         icon={Mail}
+        disabled={isLoading}
         required
       />
 
@@ -121,6 +136,7 @@ export default function LoginForm() {
         onChange={handleChange}
         error={errors.password}
         icon={Lock}
+        disabled={isLoading}
         required
       />
 
@@ -131,6 +147,7 @@ export default function LoginForm() {
           name="rememberMe"
           checked={formData.rememberMe}
           onChange={handleChange}
+          disabled={isLoading}
         />
 
         <a
@@ -152,7 +169,7 @@ export default function LoginForm() {
         disabled={isLoading}
         className={isLoading ? styles.loadingBtn : ""}
       >
-        {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+        {isLoading ? "جاري التحقق من الحساب..." : "تسجيل الدخول"}
       </Button>
     </form>
   );
