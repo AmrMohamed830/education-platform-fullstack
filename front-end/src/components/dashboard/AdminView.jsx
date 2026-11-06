@@ -53,7 +53,19 @@ export default function AdminView() {
   }, []);
 
   useEffect(() => {
-    fetchCourses();
+    let ignore = false;
+
+    const init = async () => {
+      if (!ignore) {
+        await fetchCourses();
+      }
+    };
+
+    init();
+
+    return () => {
+      ignore = true;
+    };
   }, [fetchCourses]);
 
   // ── Alert helper ────────────────────────────────────────────────────
