@@ -13,9 +13,15 @@ import useAuthStore from "@/store/auth.store";
 export default function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
   const [activeTab, setActiveTab] = useState("overview");
+  const [navKey, setNavKey] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const isAdmin = ["ADMIN", "MANAGER"].includes(user?.role);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setNavKey((prev) => prev + 1);
+  };
 
   return (
     <div className={styles.wrapper}>
@@ -23,7 +29,7 @@ export default function DashboardLayout() {
       <Sidebar
         role={isAdmin ? "admin" : "student"}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
@@ -42,10 +48,10 @@ export default function DashboardLayout() {
           {activeTab === "certificates" && <ProfileContent initialTab="certificates" />}
           {activeTab === "explore" && <CoursesCatalogContent />}
           {(activeTab === "overview" || activeTab === "my-courses") && !isAdmin && (
-            <StudentView activeTab={activeTab} />
+            <StudentView key={`${activeTab}-${navKey}`} activeTab={activeTab} />
           )}
           {(activeTab === "overview" || activeTab === "courses-manage" || activeTab === "students-manage") && isAdmin && (
-            <AdminView activeTab={activeTab} />
+            <AdminView key={`${activeTab}-${navKey}`} activeTab={activeTab} />
           )}
         </main>
       </div>
