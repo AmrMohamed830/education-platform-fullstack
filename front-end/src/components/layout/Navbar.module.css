@@ -254,7 +254,8 @@
 }
 
 
-.mobileToggle {
+.mobileToggle,
+.mobileMenuToggle {
   display: none;
   color: var(--text-main);
   padding: 0.5rem;
@@ -271,7 +272,8 @@
     display: none;
   }
 
-  .mobileToggle {
+  .mobileToggle,
+  .mobileMenuToggle {
     display: flex;
     align-items: center;
     justify-content: center;

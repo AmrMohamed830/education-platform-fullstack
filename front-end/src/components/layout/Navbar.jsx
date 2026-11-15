@@ -141,7 +141,7 @@ export default function Navbar() {
 
               {/* Mobile Menu Toggle */}
               <button
-                className={styles.mobileMenuToggle}
+                className={styles.mobileToggle}
                 onClick={() => setIsMobileMenuOpen(true)}
                 aria-label="فتح القائمة الرئيسية"
               >
