@@ -325,91 +325,152 @@ export default function AdminView({ activeTab = 'overview' }) {
 
         {/* Courses Table */}
         {!loading && !fetchError && filteredCourses.length > 0 && (
-          <div className={styles.tableResponsive}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>اسم الكورس</th>
-                  <th>المدرب</th>
-                  <th>المجال</th>
-                  <th>السعر</th>
-                  <th>الحالة</th>
-                  <th>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCourses.map((course) => (
-                  <tr key={course._id}>
-                    <td>
-                      <span className={styles.courseTitleCell}>{course.title}</span>
-                    </td>
-                    <td>{course.instructor || '—'}</td>
-                    <td>
-                      <span className={styles.catBadge}>{course.category || '—'}</span>
-                    </td>
-                    <td className={styles.priceCell}>${course.price}</td>
-                    <td>
-                      <span
-                        className={`${styles.statusPill} ${
-                          course.status === 'active' ? styles.statusActive : styles.statusDraft
-                        }`}
-                      >
-                        {statusLabel(course.status)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.actionBtns}>
-                        <button
-                          type="button"
-                          className={styles.curriculumBtn}
-                          onClick={() => setSelectedCurriculumCourse(course)}
-                          title="إدارة المنهج والدروس"
-                        >
-                          <BookOpen size={15} />
-                          <span>المنهج ({course.sections?.length || 0})</span>
-                        </button>
-                        <button
-                          type="button"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '8px',
-                            backgroundColor: '#FEF3C7',
-                            color: '#B45309',
-                            fontSize: '0.8rem',
-                            fontWeight: '700',
-                            border: '1px solid #FDE68A',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => setSelectedQuizCourse(course)}
-                          title="إدارة اختبار الكورس"
-                        >
-                          <HelpCircle size={15} />
-                          <span>الاختبار</span>
-                        </button>
-                        <button
-                          className={styles.editBtn}
-                          onClick={() => handleOpenEditModal(course)}
-                          title="تعديل الكورس"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          className={styles.deleteBtn}
-                          onClick={() => handleDeleteCourse(course._id)}
-                          title="حذف الكورس"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className={styles.tableResponsive}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>اسم الكورس</th>
+                    <th>المدرب</th>
+                    <th>المجال</th>
+                    <th>السعر</th>
+                    <th>الحالة</th>
+                    <th className={styles.actionsHeader}>الإجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredCourses.map((course) => (
+                    <tr key={course._id}>
+                      <td>
+                        <span className={styles.courseTitleCell}>{course.title}</span>
+                      </td>
+                      <td>{course.instructor || '—'}</td>
+                      <td>
+                        <span className={styles.catBadge}>{course.category || '—'}</span>
+                      </td>
+                      <td className={styles.priceCell}>${course.price}</td>
+                      <td>
+                        <span
+                          className={`${styles.statusPill} ${
+                            course.status === 'active' ? styles.statusActive : styles.statusDraft
+                          }`}
+                        >
+                          {statusLabel(course.status)}
+                        </span>
+                      </td>
+                      <td className={styles.actionsCell}>
+                        <div className={styles.actionBtns}>
+                          <button
+                            type="button"
+                            className={styles.curriculumBtn}
+                            onClick={() => setSelectedCurriculumCourse(course)}
+                            title="إدارة المنهج والدروس"
+                          >
+                            <BookOpen size={15} />
+                            <span>المنهج ({course.sections?.length || 0})</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.quizBtn}
+                            onClick={() => setSelectedQuizCourse(course)}
+                            title="إدارة اختبار الكورس"
+                          >
+                            <HelpCircle size={15} />
+                            <span>الاختبار</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.editBtn}
+                            onClick={() => handleOpenEditModal(course)}
+                            title="تعديل الكورس"
+                            aria-label="تعديل الكورس"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.deleteBtn}
+                            onClick={() => handleDeleteCourse(course._id)}
+                            title="حذف الكورس"
+                            aria-label="حذف الكورس"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Course Cards (<= 768px) */}
+            <div className={styles.mobileCourseCards}>
+              {filteredCourses.map((course) => (
+                <div key={course._id} className={styles.mobileCourseCard}>
+                  <div className={styles.mobileCardHeader}>
+                    <div className={styles.mobileCardTitleGroup}>
+                      <h3 className={styles.mobileCardTitle}>{course.title}</h3>
+                      <span className={styles.mobileCardInstructor}>
+                        المدرب: {course.instructor || 'مشرف المنصة'}
+                      </span>
+                    </div>
+                    <span
+                      className={`${styles.statusPill} ${
+                        course.status === 'active' ? styles.statusActive : styles.statusDraft
+                      }`}
+                    >
+                      {statusLabel(course.status)}
+                    </span>
+                  </div>
+
+                  <div className={styles.mobileCardMetaRow}>
+                    <span className={styles.catBadge}>{course.category || 'عام'}</span>
+                    <span className={styles.priceCell}>${course.price}</span>
+                  </div>
+
+                  <div className={styles.mobileCardActions}>
+                    <button
+                      type="button"
+                      className={styles.curriculumBtn}
+                      onClick={() => setSelectedCurriculumCourse(course)}
+                      title="إدارة المنهج والدروس"
+                    >
+                      <BookOpen size={15} />
+                      <span>المنهج ({course.sections?.length || 0})</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.quizBtn}
+                      onClick={() => setSelectedQuizCourse(course)}
+                      title="إدارة اختبار الكورس"
+                    >
+                      <HelpCircle size={15} />
+                      <span>الاختبار</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.editBtn}
+                      onClick={() => handleOpenEditModal(course)}
+                      title="تعديل الكورس"
+                      aria-label="تعديل الكورس"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => handleDeleteCourse(course._id)}
+                      title="حذف الكورس"
+                      aria-label="حذف الكورس"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
       )}
@@ -447,6 +508,22 @@ export default function AdminView({ activeTab = 'overview' }) {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Student Cards (<= 768px) */}
+          <div className={styles.mobileStudentCards}>
+            {studentsList.map((st) => (
+              <div key={st.id || st.email} className={styles.mobileStudentCard}>
+                <div className={styles.mobileStudentHeader}>
+                  <span className={styles.studentNameCell}>{st.name}</span>
+                  <span className={styles.dateCell}>{st.date}</span>
+                </div>
+                <div className={styles.mobileStudentMeta}>
+                  <span className={styles.studentEmail}>{st.email}</span>
+                  <span className={styles.catBadge}>{st.course}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
