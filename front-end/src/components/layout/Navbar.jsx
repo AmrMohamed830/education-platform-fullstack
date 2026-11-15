@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { BookOpen, Menu, User, ArrowLeft, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import Container from "../common/Container";
@@ -18,9 +18,19 @@ const NAV_LINKS = [
   { label: "آراء الطلاب", href: "/#testimonials" },
 ];
 
+const emptySubscribe = () => () => {};
+
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // React 19 hydration-safe client mounting check without cascading renders
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
   const user = useAuthStore((state) => state.user);
   const isLoading = useAuthStore((state) => state.isLoading);
 
@@ -59,37 +69,17 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons & Auth Status */}
             <div className={styles.actions}>
-              {!isLoading && !user && (
-                <>
-                  <Link href="/login" style={{ textDecoration: "none" }}>
-                    <Button
-                      variant="ghost"
-                      icon={User}
-                      iconPosition="start"
-                      className={styles.loginBtn}
-                    >
-                      تسجيل الدخول
-                    </Button>
-                  </Link>
-
-                  <Link href="/register" style={{ textDecoration: "none" }}>
-                    <Button
-                      variant="primary"
-                      icon={ArrowLeft}
-                      className={styles.registerBtn}
-                    >
-                      ابدأ التعلم
-                    </Button>
-                  </Link>
-                </>
-              )}
-
-              {!isLoading && user && (
+              {!isMounted || (isLoading && !user) ? (
+                <div className={styles.skeletonContainer} aria-hidden="true">
+                  <div className={styles.skeletonBtn} />
+                  <div className={styles.skeletonBtn} />
+                </div>
+              ) : user ? (
                 <Link
                   href="/dashboard"
-                  className={styles.userProfileBtn}
+                  className={`${styles.userProfileBtn} ${styles.fadeIn}`}
                   title="الانتقال إلى لوحة التحكم"
                 >
                   <div className={styles.userAvatarWrapper}>
@@ -124,22 +114,45 @@ export default function Navbar() {
                     <LayoutDashboard size={16} className={styles.dashboardIcon} />
                   </div>
                 </Link>
+              ) : (
+                <div className={`${styles.authButtonsGroup} ${styles.fadeIn}`}>
+                  <Link href="/login" style={{ textDecoration: "none" }}>
+                    <Button
+                      variant="ghost"
+                      icon={User}
+                      iconPosition="start"
+                      className={styles.loginBtn}
+                    >
+                      تسجيل الدخول
+                    </Button>
+                  </Link>
+
+                  <Link href="/register" style={{ textDecoration: "none" }}>
+                    <Button
+                      variant="primary"
+                      icon={ArrowLeft}
+                      className={styles.registerBtn}
+                    >
+                      ابدأ التعلم
+                    </Button>
+                  </Link>
+                </div>
               )}
 
               {/* Mobile Menu Toggle */}
               <button
-                className={styles.mobileToggle}
+                className={styles.mobileMenuToggle}
                 onClick={() => setIsMobileMenuOpen(true)}
-                aria-label="القائمة الرئيسية"
+                aria-label="فتح القائمة الرئيسية"
               >
-                <Menu size={26} />
+                <Menu size={24} />
               </button>
             </div>
           </div>
         </Container>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer Navigation */}
       <MobileMenu
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}

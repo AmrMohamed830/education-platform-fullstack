@@ -31,7 +31,7 @@ export default function MobileMenu({ isOpen, onClose, navLinks }) {
         </div>
 
         {/* User Card in Mobile Drawer if logged in */}
-        {!isLoading && user && (
+        {user && (
           <div className={styles.userCard}>
             <div className={styles.userAvatarWrapper}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -67,7 +67,7 @@ export default function MobileMenu({ isOpen, onClose, navLinks }) {
         </nav>
 
         <div className={styles.drawerFooter}>
-          {!isLoading && user ? (
+          {user ? (
             <Link href="/dashboard" style={{ textDecoration: 'none', width: '100%' }} onClick={onClose}>
               <Button variant="primary" icon={LayoutDashboard} fullWidth>
                 لوحة التحكم
