@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Search,
   Bell,
   Menu,
-  CheckCircle2,
   Sparkles,
   X,
   GraduationCap,
@@ -26,8 +25,7 @@ import styles from './DashboardNavbar.module.css';
 const formatRelativeTime = (dateStr) => {
   if (!dateStr) return '';
   const diffMs = Date.now() - new Date(dateStr).getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
+  const diffMin = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMin / 60);
   const diffDays = Math.floor(diffHours / 24);
 
@@ -42,13 +40,29 @@ const formatRelativeTime = (dateStr) => {
 const getNotifIcon = (type) => {
   switch (type) {
     case 'NEW_ENROLLMENT':
-      return <GraduationCap size={18} color="#4F46E5" style={{ flexShrink: 0, marginTop: '2px' }} />;
+      return (
+        <div className={`${styles.notifIconBadge} ${styles.badgeEnrollment}`}>
+          <GraduationCap size={18} />
+        </div>
+      );
     case 'NEW_LESSON':
-      return <PlayCircle size={18} color="#06B6D4" style={{ flexShrink: 0, marginTop: '2px' }} />;
+      return (
+        <div className={`${styles.notifIconBadge} ${styles.badgeLesson}`}>
+          <PlayCircle size={18} />
+        </div>
+      );
     case 'NEW_QUIZ':
-      return <HelpCircle size={18} color="#D97706" style={{ flexShrink: 0, marginTop: '2px' }} />;
+      return (
+        <div className={`${styles.notifIconBadge} ${styles.badgeQuiz}`}>
+          <HelpCircle size={18} />
+        </div>
+      );
     default:
-      return <Sparkles size={18} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />;
+      return (
+        <div className={`${styles.notifIconBadge} ${styles.badgeGeneral}`}>
+          <Sparkles size={18} />
+        </div>
+      );
   }
 };
 
@@ -65,6 +79,19 @@ export default function DashboardNavbar({ onToggleSidebar, user }) {
 
   const notifications = notifData?.notifications || [];
   const unreadCount = notifData?.unreadCount || 0;
+
+  // Close notifications on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showNotifications]);
 
   const handleSearchSubmit = (e) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
@@ -85,7 +112,15 @@ export default function DashboardNavbar({ onToggleSidebar, user }) {
   return (
     <header className={styles.navbar}>
       <div className={styles.leftGroup}>
-        <button className={styles.mobileMenuBtn} onClick={onToggleSidebar} aria-label="القائمة">
+        <button
+          type="button"
+          className={styles.mobileMenuBtn}
+          onClick={() => {
+            setShowNotifications(false);
+            onToggleSidebar();
+          }}
+          aria-label="القائمة الجانبية"
+        >
           <Menu size={22} />
         </button>
 
@@ -105,11 +140,15 @@ export default function DashboardNavbar({ onToggleSidebar, user }) {
 
       <div className={styles.rightGroup}>
         {/* Dynamic Notification Bell with Dropdown */}
-        <div style={{ position: 'relative' }}>
+        <div className={styles.bellWrapper}>
           <button
-            className={styles.notificationBtn}
-            onClick={() => setShowNotifications(!showNotifications)}
+            type="button"
+            className={`${styles.notificationBtn} ${
+              showNotifications ? styles.notificationBtnActive : ''
+            }`}
+            onClick={() => setShowNotifications((prev) => !prev)}
             aria-label="الإشعارات"
+            aria-expanded={showNotifications}
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -120,179 +159,117 @@ export default function DashboardNavbar({ onToggleSidebar, user }) {
           </button>
 
           {showNotifications && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '120%',
-                left: 0,
-                width: '340px',
-                maxWidth: '90vw',
-                backgroundColor: '#FFFFFF',
-                borderRadius: '1rem',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 12px 30px -5px rgba(0, 0, 0, 0.12)',
-                padding: '1rem',
-                zIndex: 1000,
-                direction: 'rtl',
-              }}
-            >
-              {/* Header */}
+            <>
+              {/* Overlay Backdrop to close when clicking outside */}
               <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderBottom: '1px solid #F1F5F9',
-                  paddingBottom: '0.65rem',
-                  marginBottom: '0.75rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0F172A' }}>
-                    الإشعارات
-                  </span>
-                  {unreadCount > 0 && (
-                    <span
-                      style={{
-                        backgroundColor: '#EEF2FF',
-                        color: '#4F46E5',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '1px 7px',
-                        borderRadius: '999px',
-                      }}
-                    >
-                      {unreadCount} جديد
-                    </span>
-                  )}
-                </div>
+                className={styles.notifBackdrop}
+                onClick={() => setShowNotifications(false)}
+                aria-hidden="true"
+              />
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {unreadCount > 0 && (
+              <div
+                className={styles.notifDropdown}
+                role="dialog"
+                aria-label="صندوق الإشعارات"
+              >
+                {/* Header */}
+                <div className={styles.notifHeader}>
+                  <div className={styles.notifTitleGroup}>
+                    <span className={styles.notifTitle}>الإشعارات</span>
+                    {unreadCount > 0 && (
+                      <span className={styles.notifCountBadge}>
+                        {unreadCount} جديد
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.notifActions}>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => markAllMutation.mutate()}
+                        disabled={markAllMutation.isPending}
+                        className={styles.markAllBtn}
+                        title="تحديد الكل كمقروء"
+                      >
+                        <CheckCheck size={14} />
+                        <span>قراءة الكل</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => markAllMutation.mutate()}
-                      disabled={markAllMutation.isPending}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#4F46E5',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.2rem',
-                      }}
-                      title="تحديد الكل كمقروء"
+                      onClick={() => setShowNotifications(false)}
+                      className={styles.closeNotifBtn}
+                      aria-label="إغلاق الإشعارات"
                     >
-                      <CheckCheck size={14} />
-                      <span>قراءة الكل</span>
+                      <X size={18} />
                     </button>
-                  )}
+                  </div>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowNotifications(false)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
-                  >
-                    <X size={16} />
-                  </button>
+                {/* Notification Items List */}
+                <div className={styles.notifList}>
+                  {loadingNotifs ? (
+                    <div className={styles.notifLoading}>
+                      <Loader2 size={24} className={styles.spinner} />
+                      <span>جارٍ تحديث الإشعارات…</span>
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className={styles.notifEmpty}>
+                      <Bell size={32} className={styles.emptyBellIcon} />
+                      <p>لا توجد إشعارات جديدة حالياً</p>
+                      <span>
+                        ستظهر التنبيهات هنا فور تسجيل طلاب جدد أو نشر دروس واختبارات.
+                      </span>
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif._id}
+                        onClick={() => handleNotificationClick(notif)}
+                        className={`${styles.notifItem} ${
+                          notif.isRead ? styles.readItem : styles.unreadItem
+                        }`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            handleNotificationClick(notif);
+                          }
+                        }}
+                      >
+                        {getNotifIcon(notif.type)}
+                        <div className={styles.notifContent}>
+                          <div className={styles.notifItemHeader}>
+                            <strong className={styles.notifItemTitle}>
+                              {notif.title}
+                            </strong>
+                            <span className={styles.notifItemTime}>
+                              {formatRelativeTime(notif.createdAt)}
+                            </span>
+                          </div>
+                          <p className={styles.notifItemMsg}>
+                            {notif.message}
+                          </p>
+                        </div>
+                        {!notif.isRead && <span className={styles.unreadDot} />}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-
-              {/* Notification Items List */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  maxHeight: '340px',
-                  overflowY: 'auto',
-                }}
-              >
-                {loadingNotifs ? (
-                  <div style={{ textAlign: 'center', padding: '1.5rem 0', color: '#94A3B8' }}>
-                    <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 0.5rem' }} />
-                    <span style={{ fontSize: '0.8rem' }}>جارٍ تحديث الإشعارات…</span>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748B' }}>
-                    <Bell size={28} style={{ color: '#CBD5E1', margin: '0 auto 0.5rem' }} />
-                    <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>لا توجد إشعارات جديدة حالياً</p>
-                    <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                      ستظهر التنبيهات هنا فور تسجيل طلاب جدد أو نشر دروس واختبارات.
-                    </span>
-                  </div>
-                ) : (
-                  notifications.map((notif) => (
-                    <div
-                      key={notif._id}
-                      onClick={() => handleNotificationClick(notif)}
-                      style={{
-                        display: 'flex',
-                        gap: '0.65rem',
-                        padding: '0.65rem 0.75rem',
-                        borderRadius: '0.65rem',
-                        backgroundColor: notif.isRead ? '#FFFFFF' : '#F8FAFC',
-                        border: `1px solid ${notif.isRead ? '#F1F5F9' : '#E0E7FF'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {getNotifIcon(notif.type)}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
-                          <strong
-                            style={{
-                              color: notif.isRead ? '#334155' : '#0F172A',
-                              fontSize: '0.825rem',
-                              fontWeight: notif.isRead ? 600 : 800,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {notif.title}
-                          </strong>
-                          <span style={{ fontSize: '0.7rem', color: '#94A3B8', flexShrink: 0 }}>
-                            {formatRelativeTime(notif.createdAt)}
-                          </span>
-                        </div>
-                        <p
-                          style={{
-                            color: '#64748B',
-                            fontSize: '0.775rem',
-                            marginTop: '0.2rem',
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {notif.message}
-                        </p>
-                      </div>
-                      {!notif.isRead && (
-                        <div
-                          style={{
-                            width: '7px',
-                            height: '7px',
-                            borderRadius: '50%',
-                            backgroundColor: '#4F46E5',
-                            alignSelf: 'center',
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            </>
           )}
         </div>
 
         {/* User Profile Snippet (Clickable to profile) */}
         <Link href="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className={styles.userProfile} style={{ cursor: 'pointer' }} title="عرض الملف الشخصي والإعدادات">
+          <div
+            className={styles.userProfile}
+            style={{ cursor: 'pointer' }}
+            title="عرض الملف الشخصي والإعدادات"
+          >
             <div className={styles.avatarWrapper}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
