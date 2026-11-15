@@ -64,6 +64,8 @@ html {
   color: var(--text-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 body {
@@ -71,7 +73,9 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  max-width: 100vw;
   background-color: var(--bg-main);
+  position: relative;
 }
 
 a {
