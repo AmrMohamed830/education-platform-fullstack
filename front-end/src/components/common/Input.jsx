@@ -1,27 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import styles from './Input.module.css';
 
-export default function Input({
-  label,
-  type = 'text',
-  placeholder,
-  value = '',
-  onChange,
-  error = '',
-  icon: Icon = null,
-  required = false,
-  name,
-  id,
-  className = '',
-  ...props
-}) {
+const Input = forwardRef(function Input(
+  {
+    label,
+    type = 'text',
+    placeholder,
+    value,
+    defaultValue,
+    onChange,
+    error = '',
+    icon: Icon = null,
+    required = false,
+    name,
+    id,
+    className = '',
+    ...props
+  },
+  ref
+) {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordType = type === 'password';
   const inputType = isPasswordType ? (showPassword ? 'text' : 'password') : type;
+
+  // Manage value / defaultValue cleanly to support both controlled and uncontrolled (e.g. react-hook-form) modes
+  const valueProps = {};
+  if (value !== undefined) {
+    valueProps.value = value;
+  }
+  if (defaultValue !== undefined) {
+    valueProps.defaultValue = defaultValue;
+  }
 
   return (
     <div className={cn(styles.inputGroup, error && styles.hasError, className)}>
@@ -35,11 +48,12 @@ export default function Input({
         {Icon && <Icon size={18} className={styles.iconStart} />}
 
         <input
+          ref={ref}
           id={id || name}
           name={name}
           type={inputType}
           placeholder={placeholder}
-          value={value}
+          {...valueProps}
           onChange={onChange}
           className={cn(
             styles.input,
@@ -65,4 +79,6 @@ export default function Input({
       {error && <span className={styles.errorMessage}>{error}</span>}
     </div>
   );
-}
+});
+
+export default Input;

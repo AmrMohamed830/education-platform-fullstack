@@ -1,28 +1,40 @@
 "use client";
 
+import { forwardRef } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/utils/cn";
 import styles from "./Checkbox.module.css";
 
-export default function Checkbox({
-  label,
-  checked = false,
-  onChange,
-  id,
-  name,
-  className = "",
-  ...props
-}) {
+const Checkbox = forwardRef(function Checkbox(
+  {
+    label,
+    checked,
+    defaultChecked,
+    onChange,
+    id,
+    name,
+    className = "",
+    ...props
+  },
+  ref
+) {
+  const checkProps = {};
+  if (checked !== undefined) checkProps.checked = checked;
+  if (defaultChecked !== undefined) checkProps.defaultChecked = defaultChecked;
+
+  const isChecked = checked ?? defaultChecked ?? false;
+
   return (
     <label
       htmlFor={id || name}
       className={cn(styles.container, className)}
     >
       <input
+        ref={ref}
         type="checkbox"
         id={id || name}
         name={name}
-        checked={checked}
+        {...checkProps}
         onChange={onChange}
         className={styles.hiddenCheckbox}
         {...props}
@@ -31,10 +43,10 @@ export default function Checkbox({
       <div
         className={cn(
           styles.styledCheckbox,
-          checked && styles.checked
+          isChecked && styles.checked
         )}
       >
-        {checked && (
+        {isChecked && (
           <Check size={14} className={styles.checkIcon} />
         )}
       </div>
@@ -44,4 +56,6 @@ export default function Checkbox({
       )}
     </label>
   );
-}
+});
+
+export default Checkbox;
