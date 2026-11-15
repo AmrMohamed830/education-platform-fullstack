@@ -2,6 +2,33 @@ const mongoose = require("mongoose");
 const Course = require("../models/course.model");
 const Enrollment = require("../models/enrollment.model");
 const userRoles = require("../utils/userRoles");
+const { generateSignedDownloadUrl } = require("../utils/supabase");
+
+// Helper: Safely generate signed download URLs for private resources in Supabase
+const resolveResources = async (resources, isAllowed) => {
+  if (!isAllowed || !Array.isArray(resources)) return [];
+
+  return Promise.all(
+    resources.map(async (resObj) => {
+      const res = resObj.toObject ? resObj.toObject() : { ...resObj };
+      // Check if this resource is stored as a Supabase storage path (e.g. resources/...)
+      if (res.url && (res.url.startsWith("resources/") || (!res.url.startsWith("http://") && !res.url.startsWith("https://")))) {
+        try {
+          const signedUrl = await generateSignedDownloadUrl(res.url, 3600);
+          return {
+            ...res,
+            rawUrl: res.url,
+            url: signedUrl,
+          };
+        } catch (err) {
+          console.warn("Could not generate signed URL for resource:", res.url, err.message);
+          return res;
+        }
+      }
+      return res;
+    })
+  );
+};
 
 // Helper: Check if current user has full access (admin/manager or enrolled student)
 const checkFullAccess = async (currentUser, courseId) => {
@@ -53,41 +80,48 @@ const getCourseCurriculum = async (req, res, next) => {
     let totalLessons = 0;
     let totalDuration = 0;
 
-    const sanitizedSections = sections.map((sec) => {
-      // Sort lessons by order
-      const sortedLessons = (sec.lessons || []).sort(
-        (a, b) => (a.order || 0) - (b.order || 0)
-      );
+    const sanitizedSections = await Promise.all(
+      sections.map(async (sec) => {
+        // Sort lessons by order
+        const sortedLessons = (sec.lessons || []).sort(
+          (a, b) => (a.order || 0) - (b.order || 0)
+        );
 
-      const lessons = sortedLessons.map((les) => {
-        totalLessons += 1;
-        totalDuration += les.duration || 0;
+        const lessons = await Promise.all(
+          sortedLessons.map(async (les) => {
+            totalLessons += 1;
+            totalDuration += les.duration || 0;
 
-        const isAllowed = hasFullAccess || les.isPreview;
+            const isAllowed = hasFullAccess || les.isPreview;
+            const resources = isAllowed
+              ? await resolveResources(les.resources, isAllowed)
+              : [];
+
+            return {
+              _id: les._id,
+              title: les.title,
+              description: les.description,
+              duration: les.duration,
+              order: les.order,
+              isPreview: les.isPreview,
+              videoUrl: isAllowed ? les.videoUrl : "",
+              resources,
+              isLocked: !isAllowed,
+              createdAt: les.createdAt,
+              updatedAt: les.updatedAt,
+            };
+          })
+        );
 
         return {
-          _id: les._id,
-          title: les.title,
-          description: les.description,
-          duration: les.duration,
-          order: les.order,
-          isPreview: les.isPreview,
-          videoUrl: isAllowed ? les.videoUrl : "",
-          resources: isAllowed ? les.resources : [],
-          isLocked: !isAllowed,
-          createdAt: les.createdAt,
-          updatedAt: les.updatedAt,
+          _id: sec._id,
+          title: sec.title,
+          description: sec.description,
+          order: sec.order,
+          lessons,
         };
-      });
-
-      return {
-        _id: sec._id,
-        title: sec.title,
-        description: sec.description,
-        order: sec.order,
-        lessons,
-      };
-    });
+      })
+    );
 
     return res.status(200).json({
       status: "success",
@@ -156,10 +190,15 @@ const getLesson = async (req, res, next) => {
       }
     }
 
+    const lessonObj = targetLesson.toObject ? targetLesson.toObject() : { ...targetLesson };
+    if (lessonObj.resources && Array.isArray(lessonObj.resources)) {
+      lessonObj.resources = await resolveResources(lessonObj.resources, true);
+    }
+
     return res.status(200).json({
       status: "success",
       data: {
-        lesson: targetLesson,
+        lesson: lessonObj,
         section: {
           _id: targetSection._id,
           title: targetSection.title,

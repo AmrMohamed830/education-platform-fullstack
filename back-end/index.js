@@ -4,6 +4,8 @@ const path = require("path");
 
 require("dotenv").config();
 
+const connectDB = require("./utils/db");
+
 // Trust proxy for secure cookies behind reverse proxies (Render, Railway, Vercel, etc.)
 app.set("trust proxy", 1);
 
@@ -36,12 +38,32 @@ app.use(
 
 app.use(express.json());
 
+// Database connection middleware for Serverless execution
+app.use(async (req, res, next) => {
+  // Skip DB connection for basic health check
+  if (req.path === "/health") {
+    return next();
+  }
+
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("Database connection error:", err.message);
+    return res.status(500).json({
+      status: "error",
+      message: "Database connection failed",
+      detail: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+});
+
 // Health check endpoint for uptime monitors and cloud deployment health probes
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Serve static uploads
+// Serve static uploads (for backward compatibility during local development)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const authRoutes = require("./routes/auth.routes");
@@ -62,19 +84,32 @@ app.use("/api/certificates", certificateRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-const url = process.env.MONGO_URL;
-
-const mongoose = require("mongoose");
-mongoose
-  .connect(url)
-  .then(() => {
-    console.log("mongodb server connected");
-  })
-  .catch((err) => {
-    console.log("mongodb connection note:", err.message);
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    status: err.status || "error",
+    message: err.message || "حدث خطأ غير متوقع في الخادم",
   });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
 });
+
+// Start server locally when executed directly (not when required by tests or Vercel)
+if (!process.env.VERCEL && require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  // Pre-connect database for fast initial local requests
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server listening on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.warn("MongoDB initial connection notice:", err.message);
+      app.listen(PORT, () => {
+        console.log(`Server listening on port ${PORT} (DB will reconnect on demand)`);
+      });
+    });
+}
+
+module.exports = app;
