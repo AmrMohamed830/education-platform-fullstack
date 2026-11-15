@@ -154,9 +154,14 @@
   -webkit-overflow-scrolling: touch;
 }
 
+@media (min-width: 769px) {
+  .tableResponsive {
+    overflow-x: hidden;
+  }
+}
+
 .table {
   width: 100%;
-  min-width: 760px;
   border-collapse: collapse;
   text-align: right;
   font-size: 0.9375rem;
@@ -169,11 +174,10 @@
   background-color: var(--bg-main);
   border-bottom: 1px solid var(--border-light);
   font-size: 0.8125rem;
-  white-space: nowrap;
 }
 
 .table td {
-  padding: 1rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--border-light);
   color: var(--text-body);
 }
@@ -234,30 +238,18 @@
   color: #D97706;
 }
 
-.actionsHeader {
-  min-width: 250px;
-  width: 250px;
-}
-
-.actionsCell {
-  min-width: 250px;
-  width: 250px;
-  white-space: nowrap;
-}
-
 .actionBtns {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   white-space: nowrap;
-  flex-wrap: nowrap;
 }
 
 .curriculumBtn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0.35rem 0.65rem;
   border-radius: var(--radius-sm);
   background-color: #EEF2FF;
   color: #4F46E5;
@@ -279,7 +271,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0.35rem 0.65rem;
   border-radius: var(--radius-sm);
   background-color: #FEF3C7;
   color: #B45309;
@@ -301,10 +293,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;

@@ -335,7 +335,7 @@ export default function AdminView({ activeTab = 'overview' }) {
                     <th>المجال</th>
                     <th>السعر</th>
                     <th>الحالة</th>
-                    <th className={styles.actionsHeader}>الإجراءات</th>
+                    <th>الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -358,7 +358,7 @@ export default function AdminView({ activeTab = 'overview' }) {
                           {statusLabel(course.status)}
                         </span>
                       </td>
-                      <td className={styles.actionsCell}>
+                      <td>
                         <div className={styles.actionBtns}>
                           <button
                             type="button"
